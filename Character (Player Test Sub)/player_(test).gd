@@ -21,7 +21,14 @@ var is_grappled := false
 var grapple_timer := 0.0
 var grapple_target := Vector3.ZERO
 
+@onready var camera_settings := $"Camera Settings"
+@onready var crosshair: TextureRect = $UI/Crosshair
+
 func _physics_process(delta):
+	# Update crosshair — show green when a valid grapple target is in range
+	if not is_grappled:
+		crosshair.set_valid_target(not raycast_grapple().is_empty())
+
 	if is_grappled:
 		update_grapple(delta)
 		move_and_slide()
@@ -114,6 +121,7 @@ func try_start_grapple() -> bool:
 	is_sliding = false
 	velocity.x *= 0.2
 	velocity.z *= 0.2
+	camera_settings.add_shake(0.12)
 	return true
 
 
@@ -132,6 +140,11 @@ func update_grapple(delta):
 	# Pull the player toward the anchor point
 	var pull_dir := (grapple_target - pull_point).normalized()
 	velocity += pull_dir * grapple_accel * delta
+
+	# Approaching shake — stronger when fast, fades as we get closer
+	var dist := pull_point.distance_to(grapple_target)
+	var speed := velocity.length()
+	camera_settings.add_shake(speed * 0.002 * clampf(dist / 15.0, 0.0, 1.0))
 
 
 func end_grapple() -> void:

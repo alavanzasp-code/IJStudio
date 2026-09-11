@@ -2,6 +2,9 @@ extends Node3D
 
 @export_range(0.0001, 0.02, 0.0001) var mouse_sensitivity := 0.002
 @export_range(1.0, 89.0, 1.0) var max_pitch_degrees := 85.0
+@export var base_fov := 75.0
+@export var min_fov := 50.0
+@export var fov_lerp_speed := 8.0
 
 @onready var character := get_parent() as CharacterBody3D
 @onready var camera_3d := get_node("Camera3D") as Camera3D
@@ -10,17 +13,41 @@ var yaw := 0.0
 var pitch := 0.0
 var view_is_left := false
 var view_tween: Tween
+var _shake_offset := Vector2.ZERO
 
 
 func _ready() -> void:
 	if character == null:
 		push_error("Camera Settings must be a child of a CharacterBody3D.")
 		set_process_input(false)
+		set_process(false)
 		return
 
 	yaw = character.rotation.y
 	pitch = rotation.x
+	camera_3d.fov = base_fov
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+
+func _process(delta: float) -> void:
+	_shake_offset = _shake_offset.lerp(Vector2.ZERO, 10.0 * delta)
+	camera_3d.h_offset = _shake_offset.x
+	camera_3d.v_offset = _shake_offset.y
+
+	if not character:
+		return
+
+	var speed := Vector3(character.velocity.x, 0, character.velocity.z).length()
+	var normalized := clampf(speed / 30.0, 0.0, 1.0)
+	var target_fov := lerpf(base_fov, min_fov, normalized * normalized)
+	camera_3d.fov = lerpf(camera_3d.fov, target_fov, fov_lerp_speed * delta)
+
+
+func add_shake(intensity: float) -> void:
+	_shake_offset += Vector2(
+		randf_range(-1.0, 1.0),
+		randf_range(-1.0, 1.0),
+	) * intensity
 
 
 func _input(event: InputEvent) -> void:
