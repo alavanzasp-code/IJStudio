@@ -3,7 +3,7 @@ extends Node3D
 @export_range(0.0001, 0.02, 0.0001) var mouse_sensitivity := 0.002
 @export_range(1.0, 89.0, 1.0) var max_pitch_degrees := 85.0
 @export var base_fov := 75.0
-@export var min_fov := 50.0
+@export var max_fov := 100.0
 @export var fov_lerp_speed := 8.0
 
 @onready var character := get_parent() as CharacterBody3D
@@ -39,7 +39,7 @@ func _process(delta: float) -> void:
 
 	var speed := Vector3(character.velocity.x, 0, character.velocity.z).length()
 	var normalized := clampf(speed / 30.0, 0.0, 1.0)
-	var target_fov := lerpf(base_fov, min_fov, normalized * normalized)
+	var target_fov := lerpf(base_fov, max_fov, normalized * normalized)
 	camera_3d.fov = lerpf(camera_3d.fov, target_fov, fov_lerp_speed * delta)
 
 
