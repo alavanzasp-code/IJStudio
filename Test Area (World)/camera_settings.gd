@@ -14,6 +14,7 @@ var pitch := 0.0
 var view_is_left := false
 var view_tween: Tween
 var _shake_offset := Vector2.ZERO
+var _is_grappling := false
 
 
 func _ready() -> void:
@@ -37,10 +38,16 @@ func _process(delta: float) -> void:
 	if not character:
 		return
 
-	var speed := Vector3(character.velocity.x, 0, character.velocity.z).length()
-	var normalized := clampf(speed / 30.0, 0.0, 1.0)
-	var target_fov := lerpf(base_fov, max_fov, normalized * normalized)
+	var target_fov := base_fov
+	if _is_grappling:
+		var speed := Vector3(character.velocity.x, 0, character.velocity.z).length()
+		var normalized := clampf(speed / 30.0, 0.0, 1.0)
+		target_fov = lerpf(base_fov, max_fov, normalized * normalized)
 	camera_3d.fov = lerpf(camera_3d.fov, target_fov, fov_lerp_speed * delta)
+
+
+func set_grappling(active: bool) -> void:
+	_is_grappling = active
 
 
 func add_shake(intensity: float) -> void:
