@@ -6,13 +6,13 @@ extends CharacterBody3D
 @export var jump_velocity := 3
 
 @export var slide_speed := 20.0
-@export var slide_duration := 5.0
+@export var slide_duration := 2.0
 
 @export var grapple_range := 30.0
 @export var grapple_duration := 1.4
 @export var grapple_accel := 30.0
 @export var grapple_cancel_distance := 1.0
-@export var grapple_cooldown := 0.4
+@export var grapple_cooldown := 4
 @export_range(0.0, 1.0, 0.01) var max_grapple_slope := 0.4
 
 @export var wall_slide_speed := 3.0
