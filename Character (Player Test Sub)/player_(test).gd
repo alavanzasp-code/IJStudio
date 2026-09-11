@@ -8,7 +8,9 @@ extends CharacterBody3D
 @export var slide_speed := 20.0
 @export var slide_duration := 5.0
 
-@export var grapple_range := 2.5
+const GRAPPLE_ROPE_SCRIPT := preload("res://Character (Player Test Sub)/grapple_rope.gd")
+
+@export var grapple_range := 20.0
 @export var grapple_duration := 1.2
 @export var grapple_slide_speed := 2.0
 @export var wall_jump_push := 6.0
@@ -20,6 +22,12 @@ var slide_direction := Vector3.ZERO
 var is_grappled := false
 var grapple_timer := 0.0
 var grapple_normal := Vector3.ZERO
+var grapple_rope: MeshInstance3D
+
+func _ready() -> void:
+	grapple_rope = MeshInstance3D.new()
+	grapple_rope.set_script(GRAPPLE_ROPE_SCRIPT)
+	add_child(grapple_rope)
 
 func _physics_process(delta):
 	if is_grappled:
@@ -91,34 +99,32 @@ func is_sprinting() -> bool:
 	return Input.is_action_pressed("sprint")
 
 
-func find_wall_normal() -> Vector3:
+func raycast_wall() -> Dictionary:
 	var space := get_world_3d().direct_space_state
 	var origin := global_position + Vector3(0, 0.6, 0)
 	var query := PhysicsRayQueryParameters3D.create(
 		origin,
 		origin - global_transform.basis.z * grapple_range,
 	)
-	var hit := space.intersect_ray(query)
-	if hit:
-		return hit.normal
-	return Vector3.ZERO
+	return space.intersect_ray(query)
 
 
 func try_start_grapple() -> bool:
 	if is_on_floor():
 		return false
 
-	var wall_normal := find_wall_normal()
-	if wall_normal == Vector3.ZERO:
+	var hit := raycast_wall()
+	if hit.is_empty():
 		return false
 
 	is_grappled = true
 	grapple_timer = grapple_duration
-	grapple_normal = wall_normal
+	grapple_normal = hit.normal
 	is_sliding = false
 	velocity.y = -grapple_slide_speed
 	velocity.x *= 0.2
 	velocity.z *= 0.2
+	grapple_rope.launch(global_position + Vector3(0, 0.6, 0), hit.position)
 	return true
 
 
@@ -127,12 +133,12 @@ func update_grapple(delta):
 
 	if Input.is_action_just_pressed("jump"):
 		wall_jump()
-		is_grappled = false
+		end_grapple()
 		return
 
 	# Detach when time runs out or the wall is no longer in reach
-	if grapple_timer <= 0.0 or find_wall_normal() == Vector3.ZERO:
-		is_grappled = false
+	if grapple_timer <= 0.0 or raycast_wall().is_empty():
+		end_grapple()
 		return
 
 	# Slide down the wall at a steady pace
@@ -141,6 +147,11 @@ func update_grapple(delta):
 	# Cling to the wall, damp incoming horizontal speed
 	velocity.x = move_toward(velocity.x, 0, acceleration * 2.0 * delta)
 	velocity.z = move_toward(velocity.z, 0, acceleration * 2.0 * delta)
+
+
+func end_grapple() -> void:
+	is_grappled = false
+	grapple_rope.end()
 
 
 func wall_jump() -> void:
