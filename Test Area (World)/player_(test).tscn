@@ -1,0 +1,24 @@
+[gd_scene format=3 uid="uid://dgeyhgsoq3k8t"]
+
+[ext_resource type="Script" uid="uid://cyfg3k13d4fkc" path="res://Character (Player Test Sub)/player_(test).gd" id="1_5b8i2"]
+[ext_resource type="Script" uid="uid://uwnwpa8croaq" path="res://Test Area (World)/camera_settings.gd" id="2_uyn5y"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mltf8"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_mltf8"]
+
+[node name="Player (Test)" type="CharacterBody3D" unique_id=1302519365]
+script = ExtResource("1_5b8i2")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=857204942]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.118676186, 0)
+shape = SubResource("CapsuleShape3D_mltf8")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=394142981]
+mesh = SubResource("CapsuleMesh_mltf8")
+
+[node name="Camera Settings" type="Node3D" parent="." unique_id=1413544793]
+script = ExtResource("2_uyn5y")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1097398870]
+transform = Transform3D(1, 0, 0, 0, 0.9947028, 0.10279253, 0, -0.10279253, 0.9947028, 1.5, 1.5, 4)

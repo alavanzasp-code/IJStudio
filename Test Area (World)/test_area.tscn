@@ -1,0 +1,46 @@
+[gd_scene format=3 uid="uid://nsdjoqmq7lkq"]
+
+[ext_resource type="Texture2D" uid="uid://bmsmssijff3r7" path="res://Assets/PNG/Dark/texture_05.png" id="1_p57bx"]
+[ext_resource type="PackedScene" uid="uid://dgeyhgsoq3k8t" path="res://Test Area (World)/player_(test).tscn" id="2_0lty6"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_p57bx"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_0lty6"]
+sky_material = SubResource("ProceduralSkyMaterial_p57bx")
+
+[sub_resource type="Environment" id="Environment_xnvkt"]
+background_mode = 2
+sky = SubResource("Sky_0lty6")
+glow_enabled = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mltf8"]
+albedo_texture = ExtResource("1_p57bx")
+uv1_triplanar = true
+
+[node name="Test Area" type="Node3D" unique_id=1012487593]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1307493249]
+environment = SubResource("Environment_xnvkt")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1174488908]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=619963681]
+use_collision = true
+
+[node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1464855038]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9012084, 0)
+size = Vector3(30, 5.902417, 30)
+material = SubResource("StandardMaterial3D_mltf8")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D" unique_id=698490447]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.4665985, 0)
+operation = 2
+size = Vector3(29, 6.633197, 29)
+material = SubResource("StandardMaterial3D_mltf8")
+
+[node name="Player (Test)" parent="." unique_id=1302519365 instance=ExtResource("2_0lty6")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3553977, 0)
