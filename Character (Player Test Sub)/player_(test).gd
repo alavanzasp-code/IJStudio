@@ -8,11 +8,32 @@ extends CharacterBody3D
 @export var slide_speed := 20.0
 @export var slide_duration := 5.0
 
+@export var grapple_range := 30.0
+@export var grapple_duration := 1.4
+@export var grapple_accel := 30.0
+@export var grapple_cancel_distance := 1.0
+
 var is_sliding := false
 var slide_timer := 5
 var slide_direction := Vector3.ZERO
 
+var is_grappled := false
+var grapple_timer := 0.0
+var grapple_target := Vector3.ZERO
+
+@onready var camera_settings := $"Camera Settings"
+@onready var crosshair: TextureRect = $UI/Crosshair
+
 func _physics_process(delta):
+	# Update crosshair — show green when a valid grapple target is in range
+	if not is_grappled:
+		crosshair.set_valid_target(not raycast_grapple().is_empty())
+
+	if is_grappled:
+		update_grapple(delta)
+		move_and_slide()
+		return
+
 	# Gravity
 	if not is_on_floor():
 		velocity += get_gravity() * delta
@@ -20,6 +41,12 @@ func _physics_process(delta):
 	# Jump
 	if Input.is_action_just_pressed("jump") and is_on_floor() and not is_sliding:
 		velocity.y = jump_velocity
+
+	# Start grapple
+	if Input.is_action_just_pressed("grapple"):
+		if try_start_grapple():
+			move_and_slide()
+			return
 
 	# Start slide
 	if Input.is_action_just_pressed("slide") and is_on_floor() and is_sprinting():
@@ -69,6 +96,59 @@ func _physics_process(delta):
 
 func is_sprinting() -> bool:
 	return Input.is_action_pressed("sprint")
+
+
+func raycast_grapple() -> Dictionary:
+	var camera := get_viewport().get_camera_3d()
+	var center := get_viewport().get_visible_rect().size * 0.5
+	var origin := camera.project_ray_origin(center)
+	var query := PhysicsRayQueryParameters3D.create(
+		origin,
+		origin + camera.project_ray_normal(center) * grapple_range,
+	)
+	query.exclude = [get_rid()]
+	return get_world_3d().direct_space_state.intersect_ray(query)
+
+
+func try_start_grapple() -> bool:
+	var hit := raycast_grapple()
+	if hit.is_empty():
+		return false
+
+	is_grappled = true
+	grapple_timer = grapple_duration
+	grapple_target = hit.position
+	is_sliding = false
+	velocity.x *= 0.2
+	velocity.z *= 0.2
+	camera_settings.add_shake(0.12)
+	return true
+
+
+func update_grapple(delta):
+	grapple_timer -= delta
+
+	if Input.is_action_just_pressed("jump"):
+		end_grapple()
+		return
+
+	var pull_point := global_position + Vector3(0, 0.6, 0)
+	if grapple_timer <= 0.0 or pull_point.distance_to(grapple_target) <= grapple_cancel_distance:
+		end_grapple()
+		return
+
+	# Pull the player toward the anchor point
+	var pull_dir := (grapple_target - pull_point).normalized()
+	velocity += pull_dir * grapple_accel * delta
+
+	# Approaching shake — stronger when fast, fades as we get closer
+	var dist := pull_point.distance_to(grapple_target)
+	var speed := velocity.length()
+	camera_settings.add_shake(speed * 0.002 * clampf(dist / 15.0, 0.0, 1.0))
+
+
+func end_grapple() -> void:
+	is_grappled = false
 
 
 func start_slide():
