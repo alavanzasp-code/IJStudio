@@ -4,9 +4,12 @@ extends Node3D
 @export_range(1.0, 89.0, 1.0) var max_pitch_degrees := 85.0
 
 @onready var character := get_parent() as CharacterBody3D
+@onready var camera_3d := get_node("Camera3D") as Camera3D
 
 var yaw := 0.0
 var pitch := 0.0
+var view_is_left := false
+var view_tween: Tween
 
 
 func _ready() -> void:
@@ -26,6 +29,10 @@ func _input(event: InputEvent) -> void:
 		Input.set_mouse_mode(
 			Input.MOUSE_MODE_VISIBLE if mouse_is_captured else Input.MOUSE_MODE_CAPTURED
 		)
+		return
+
+	if event.is_action_pressed("switch-view"):
+		switch_view()
 		return
 
 	if (
@@ -50,3 +57,16 @@ func look_around(mouse_movement: Vector2) -> void:
 	# this pivot so looking up or down never tilts the collision body.
 	character.rotation.y = yaw
 	rotation.x = pitch
+
+
+func switch_view() -> void:
+	view_is_left = not view_is_left
+	var target_x: float = -abs(camera_3d.position.x) if view_is_left else abs(camera_3d.position.x)
+
+	if view_tween and view_tween.is_valid():
+		view_tween.kill()
+
+	view_tween = create_tween()
+	view_tween.tween_property(camera_3d, "position:x", target_x, 0.2) \
+		.set_trans(Tween.TRANS_SINE) \
+		.set_ease(Tween.EASE_OUT)
