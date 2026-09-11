@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://brvrapk2e410"]
+
+[ext_resource type="Script" path="res://Character (Player Test Sub)/grapple_rope.gd" id="1_grprp"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_s0xi7"]
+
+[node name="GrappleRope" type="MeshInstance3D" unique_id=1140873701]
+mesh = SubResource("BoxMesh_s0xi7")
+script = ExtResource("1_grprp")

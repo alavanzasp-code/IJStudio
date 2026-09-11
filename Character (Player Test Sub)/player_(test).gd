@@ -8,12 +8,10 @@ extends CharacterBody3D
 @export var slide_speed := 20.0
 @export var slide_duration := 5.0
 
-const GRAPPLE_ROPE_SCRIPT := preload("res://Character (Player Test Sub)/grapple_rope.gd")
-
-@export var grapple_range := 20.0
-@export var grapple_duration := 1.2
-@export var grapple_slide_speed := 2.0
-@export var wall_jump_push := 6.0
+@export var grapple_range := 30.0
+@export var grapple_duration := 1.4
+@export var grapple_accel := 30.0
+@export var grapple_cancel_distance := 1.0
 
 var is_sliding := false
 var slide_timer := 5
@@ -21,13 +19,7 @@ var slide_direction := Vector3.ZERO
 
 var is_grappled := false
 var grapple_timer := 0.0
-var grapple_normal := Vector3.ZERO
-var grapple_rope: MeshInstance3D
-
-func _ready() -> void:
-	grapple_rope = MeshInstance3D.new()
-	grapple_rope.set_script(GRAPPLE_ROPE_SCRIPT)
-	add_child(grapple_rope)
+var grapple_target := Vector3.ZERO
 
 func _physics_process(delta):
 	if is_grappled:
@@ -99,32 +91,29 @@ func is_sprinting() -> bool:
 	return Input.is_action_pressed("sprint")
 
 
-func raycast_wall() -> Dictionary:
-	var space := get_world_3d().direct_space_state
-	var origin := global_position + Vector3(0, 0.6, 0)
+func raycast_grapple() -> Dictionary:
+	var camera := get_viewport().get_camera_3d()
+	var center := get_viewport().get_visible_rect().size * 0.5
+	var origin := camera.project_ray_origin(center)
 	var query := PhysicsRayQueryParameters3D.create(
 		origin,
-		origin - global_transform.basis.z * grapple_range,
+		origin + camera.project_ray_normal(center) * grapple_range,
 	)
-	return space.intersect_ray(query)
+	query.exclude = [get_rid()]
+	return get_world_3d().direct_space_state.intersect_ray(query)
 
 
 func try_start_grapple() -> bool:
-	if is_on_floor():
-		return false
-
-	var hit := raycast_wall()
+	var hit := raycast_grapple()
 	if hit.is_empty():
 		return false
 
 	is_grappled = true
 	grapple_timer = grapple_duration
-	grapple_normal = hit.normal
+	grapple_target = hit.position
 	is_sliding = false
-	velocity.y = -grapple_slide_speed
 	velocity.x *= 0.2
 	velocity.z *= 0.2
-	grapple_rope.launch(global_position + Vector3(0, 0.6, 0), hit.position)
 	return true
 
 
@@ -132,31 +121,21 @@ func update_grapple(delta):
 	grapple_timer -= delta
 
 	if Input.is_action_just_pressed("jump"):
-		wall_jump()
 		end_grapple()
 		return
 
-	# Detach when time runs out or the wall is no longer in reach
-	if grapple_timer <= 0.0 or raycast_wall().is_empty():
+	var pull_point := global_position + Vector3(0, 0.6, 0)
+	if grapple_timer <= 0.0 or pull_point.distance_to(grapple_target) <= grapple_cancel_distance:
 		end_grapple()
 		return
 
-	# Slide down the wall at a steady pace
-	velocity.y = move_toward(velocity.y, -grapple_slide_speed, acceleration * delta)
-
-	# Cling to the wall, damp incoming horizontal speed
-	velocity.x = move_toward(velocity.x, 0, acceleration * 2.0 * delta)
-	velocity.z = move_toward(velocity.z, 0, acceleration * 2.0 * delta)
+	# Pull the player toward the anchor point
+	var pull_dir := (grapple_target - pull_point).normalized()
+	velocity += pull_dir * grapple_accel * delta
 
 
 func end_grapple() -> void:
 	is_grappled = false
-	grapple_rope.end()
-
-
-func wall_jump() -> void:
-	velocity.y = jump_velocity
-	velocity += grapple_normal * wall_jump_push
 
 
 func start_slide():
