@@ -12,6 +12,8 @@ extends CharacterBody3D
 @export var grapple_duration := 1.4
 @export var grapple_accel := 30.0
 @export var grapple_cancel_distance := 1.0
+@export var grapple_cooldown := 0.4
+@export_range(0.0, 1.0, 0.01) var max_grapple_slope := 0.4
 
 var is_sliding := false
 var slide_timer := 5
@@ -20,14 +22,17 @@ var slide_direction := Vector3.ZERO
 var is_grappled := false
 var grapple_timer := 0.0
 var grapple_target := Vector3.ZERO
+var _grapple_cooldown_timer := 0.0
 
 @onready var camera_settings := $"Camera Settings"
 @onready var crosshair: TextureRect = $UI/Crosshair
 
 func _physics_process(delta):
+	_grapple_cooldown_timer = maxf(0.0, _grapple_cooldown_timer - delta)
+
 	# Update crosshair — show green when a valid grapple target is in range
 	if not is_grappled:
-		crosshair.set_valid_target(not raycast_grapple().is_empty())
+		crosshair.set_valid_target(is_grapplable(raycast_grapple()))
 
 	if is_grappled:
 		update_grapple(delta)
@@ -110,9 +115,16 @@ func raycast_grapple() -> Dictionary:
 	return get_world_3d().direct_space_state.intersect_ray(query)
 
 
+func is_grapplable(hit: Dictionary) -> bool:
+	return not hit.is_empty() and hit.normal.dot(Vector3.UP) < max_grapple_slope
+
+
 func try_start_grapple() -> bool:
+	if _grapple_cooldown_timer > 0.0:
+		return false
+
 	var hit := raycast_grapple()
-	if hit.is_empty():
+	if not is_grapplable(hit):
 		return false
 
 	is_grappled = true
@@ -121,6 +133,7 @@ func try_start_grapple() -> bool:
 	is_sliding = false
 	velocity.x *= 0.2
 	velocity.z *= 0.2
+	camera_settings.set_grappling(true)
 	camera_settings.add_shake(0.12)
 	return true
 
@@ -133,8 +146,12 @@ func update_grapple(delta):
 		return
 
 	var pull_point := global_position + Vector3(0, 0.6, 0)
-	if grapple_timer <= 0.0 or pull_point.distance_to(grapple_target) <= grapple_cancel_distance:
+	if grapple_timer <= 0.0:
 		end_grapple()
+		return
+
+	if pull_point.distance_to(grapple_target) <= grapple_cancel_distance:
+		end_grapple(true)
 		return
 
 	# Pull the player toward the anchor point
@@ -147,8 +164,17 @@ func update_grapple(delta):
 	camera_settings.add_shake(speed * 0.002 * clampf(dist / 15.0, 0.0, 1.0))
 
 
-func end_grapple() -> void:
+func end_grapple(damp_velocity := false) -> void:
 	is_grappled = false
+	_grapple_cooldown_timer = grapple_cooldown
+	camera_settings.set_grappling(false)
+
+	if damp_velocity:
+		# Landing damp — bleed off the incoming pull so we don't slam the wall
+		velocity.x *= 0.35
+		velocity.z *= 0.35
+		velocity.y *= 0.4
+		camera_settings.add_shake(0.05)
 
 
 func start_slide():
