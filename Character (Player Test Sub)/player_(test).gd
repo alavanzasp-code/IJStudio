@@ -6,10 +6,11 @@ extends CharacterBody3D
 @export var acceleration := 20.0
 @export var jump_velocity := 3
 
-@export var turn_response := 25.0
 @export var deceleration := 11.0
 @export var air_control := 0.35
 @export var air_friction := 0.05
+@export var turn_accel := 35.0
+@export var brake_accel := 45.0
 @export var facing_turn_speed := 15.0
 
 @export var slide_speed := 20.0
@@ -118,7 +119,7 @@ func _physics_process(delta):
 		# Sprint is available in whatever direction you're heading
 		var is_sprinting_now := is_sprinting()
 		var base_speed := sprint_speed if is_sprinting_now else walk_speed
-		var accel := sprint_accel if is_sprinting_now else acceleration
+		var build := sprint_accel if is_sprinting_now else acceleration
 
 		# Full character rotation — the model turns to face where it's going
 		var facing_yaw: float = atan2(-wish_dir.x, -wish_dir.z)
@@ -128,14 +129,22 @@ func _physics_process(delta):
 			clampf(facing_turn_speed * delta, 0.0, 1.0),
 		)
 
-		# Snappy turns — residual sideways drift left over from the old heading
-		# is damped hard so the body follows the input instead of sliding.
-		var perp := Vector3(velocity.x, 0, velocity.z)
-		perp -= wish_dir * perp.dot(wish_dir)
-		if perp.length_squared() > 0.0001:
-			var damp: float = clampf(turn_response * control * delta, 0.0, 1.0)
-			velocity.x -= perp.x * damp
-			velocity.z -= perp.z * damp
+		# Direction changes keep their momentum instead of restarting a ramp:
+		# a hard brake flips full reversals in under a second, and a strong
+		# thrust snaps onto a new heading without bleeding speed.
+		var flat_velocity := Vector3(velocity.x, 0, velocity.z)
+		var flat_speed := flat_velocity.length()
+		var along := flat_velocity.dot(wish_dir)
+
+		var accel := build
+		if flat_speed > 0.5:
+			var deviation := flat_velocity.normalized().angle_to(wish_dir)
+			if deviation > deg_to_rad(35.0):
+				accel = brake_accel if along < 0.0 else turn_accel
+			elif flat_speed > base_speed * 0.5:
+				accel = maxf(build, turn_accel)
+			else:
+				accel = build
 
 		var target_velocity := wish_dir * base_speed
 		velocity.x = move_toward(velocity.x, target_velocity.x, accel * control * delta)
