@@ -36,9 +36,14 @@ var wall_normal := Vector3.ZERO
 
 @onready var camera_settings := $"Camera Settings"
 @onready var crosshair: TextureRect = $UI/Crosshair
+@onready var grapple_cd_bar: ProgressBar = $UI/GrappleCooldown
 
 func _physics_process(delta):
 	_grapple_cooldown_timer = maxf(0.0, _grapple_cooldown_timer - delta)
+
+	# Update grapple cooldown bar
+	grapple_cd_bar.visible = _grapple_cooldown_timer > 0.0
+	grapple_cd_bar.value = _grapple_cooldown_timer / grapple_cooldown
 
 	# Update crosshair — show green when a valid grapple target is in range
 	if not is_grappled:
