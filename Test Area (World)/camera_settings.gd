@@ -37,6 +37,11 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	# The camera holds its own world-space yaw. The body rotates toward its
+	# movement direction, so compensate here or the view would swing with it.
+	rotation.y = yaw - character.rotation.y
+	rotation.x = pitch
+
 	_shake_offset = _shake_offset.lerp(Vector2.ZERO, 10.0 * delta)
 	camera_3d.h_offset = _shake_offset.x
 	camera_3d.v_offset = _shake_offset.y
@@ -115,11 +120,6 @@ func look_around(mouse_movement: Vector2) -> void:
 	yaw -= mouse_movement.x * mouse_sensitivity
 	pitch -= mouse_movement.y * mouse_sensitivity
 	pitch = clamp(pitch, -deg_to_rad(max_pitch_degrees), deg_to_rad(max_pitch_degrees))
-
-	# Yaw the character so movement stays relative to the view. Keep pitch on
-	# this pivot so looking up or down never tilts the collision body.
-	character.rotation.y = yaw
-	rotation.x = pitch
 
 
 func switch_view() -> void:
