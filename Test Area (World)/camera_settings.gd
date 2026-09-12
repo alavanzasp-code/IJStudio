@@ -65,7 +65,7 @@ func apply_camera_collision() -> void:
 	# clips through walls or the floor.
 	var ideal_local := Vector3(_view_x, _base_camera_pos.y, _base_camera_pos.z)
 	var ideal_world := global_transform * ideal_local
-	var anchor := global_position + Vector3(0, 0.5, 0)
+	var anchor := global_position + Vector3(0, 0.5, 1)
 
 	var space := get_world_3d().direct_space_state
 	var query := PhysicsRayQueryParameters3D.create(anchor, ideal_world)

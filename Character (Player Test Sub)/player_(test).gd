@@ -340,6 +340,7 @@ func _detect_wall_normal() -> Vector3:
 
 func start_slide():
 	is_sliding = true
+	@warning_ignore("narrowing_conversion")
 	slide_timer = slide_duration
 
 	# Slide in the direction the player is currently moving

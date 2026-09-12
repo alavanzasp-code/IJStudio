@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://cyfg3k13d4fkc" path="res://Character (Player Test Sub)/player_(test).gd" id="1_5b8i2"]
 [ext_resource type="Script" uid="uid://uwnwpa8croaq" path="res://Test Area (World)/camera_settings.gd" id="2_uyn5y"]
 [ext_resource type="Script" uid="uid://bdy13d18cgfe1" path="res://Character (Player Test Sub)/crosshair.gd" id="3_chhr"]
+[ext_resource type="PackedScene" path="res://Weapons/bow_(test).tscn" id="4_bow"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_mltf8"]
 
@@ -16,6 +17,9 @@ albedo_color = Color(1, 0.35, 0.1, 1)
 
 [node name="Player (Test)" type="CharacterBody3D" unique_id=1302519365]
 script = ExtResource("1_5b8i2")
+
+[node name="Bow" parent="." unique_id=967329203 instance=ExtResource("4_bow")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 0.85, -0.6)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=857204942]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.118676186, 0)
