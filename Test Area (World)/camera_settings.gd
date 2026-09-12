@@ -5,6 +5,8 @@ extends Node3D
 @export var base_fov := 75.0
 @export var max_fov := 100.0
 @export var fov_lerp_speed := 8.0
+@export var camera_margin := 0.2
+@export var min_camera_distance := 0.4
 
 @onready var character := get_parent() as CharacterBody3D
 @onready var camera_3d := get_node("Camera3D") as Camera3D
@@ -15,6 +17,8 @@ var view_is_left := false
 var view_tween: Tween
 var _shake_offset := Vector2.ZERO
 var _is_grappling := false
+var _view_x := 0.0
+var _base_camera_pos := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -27,6 +31,8 @@ func _ready() -> void:
 	yaw = character.rotation.y
 	pitch = rotation.x
 	camera_3d.fov = base_fov
+	_base_camera_pos = camera_3d.position
+	_view_x = _base_camera_pos.x
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
@@ -44,6 +50,29 @@ func _process(delta: float) -> void:
 		var normalized := clampf(speed / 30.0, 0.0, 1.0)
 		target_fov = lerpf(base_fov, max_fov, normalized * normalized)
 	camera_3d.fov = lerpf(camera_3d.fov, target_fov, fov_lerp_speed * delta)
+
+	apply_camera_collision()
+
+
+func apply_camera_collision() -> void:
+	# Ideal camera spot (view-switch animation drives only the x offset).
+	# If anything blocks the camera on the way there, pull it in so it never
+	# clips through walls or the floor.
+	var ideal_local := Vector3(_view_x, _base_camera_pos.y, _base_camera_pos.z)
+	var ideal_world := global_transform * ideal_local
+	var anchor := global_position + Vector3(0, 0.5, 0)
+
+	var space := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(anchor, ideal_world)
+	query.exclude = [character.get_rid()]
+	var hit := space.intersect_ray(query)
+	if hit:
+		var dir: Vector3 = (ideal_world - anchor).normalized()
+		ideal_world = hit.position - dir * camera_margin
+		if anchor.distance_to(ideal_world) < min_camera_distance:
+			ideal_world = anchor + dir * min_camera_distance
+
+	camera_3d.position = to_local(ideal_world)
 
 
 func set_grappling(active: bool) -> void:
@@ -95,12 +124,12 @@ func look_around(mouse_movement: Vector2) -> void:
 
 func switch_view() -> void:
 	view_is_left = not view_is_left
-	var target_x: float = -abs(camera_3d.position.x) if view_is_left else abs(camera_3d.position.x)
+	var target_x: float = -abs(_base_camera_pos.x) if view_is_left else abs(_base_camera_pos.x)
 
 	if view_tween and view_tween.is_valid():
 		view_tween.kill()
 
 	view_tween = create_tween()
-	view_tween.tween_property(camera_3d, "position:x", target_x, 0.2) \
+	view_tween.tween_property(self, "_view_x", target_x, 0.2) \
 		.set_trans(Tween.TRANS_SINE) \
 		.set_ease(Tween.EASE_OUT)

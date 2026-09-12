@@ -3,17 +3,24 @@ extends CharacterBody3D
 @export var walk_speed := 5.0
 @export var sprint_speed := 15.0
 @export var acceleration := 15.0
-@export var jump_velocity := 5.0
+@export var jump_velocity := 3
 
 @export var slide_speed := 20.0
-@export var slide_duration := 5.0
+@export var slide_duration := 2.0
 
 @export var grapple_range := 30.0
 @export var grapple_duration := 1.4
 @export var grapple_accel := 30.0
 @export var grapple_cancel_distance := 1.0
-@export var grapple_cooldown := 0.4
+@export var grapple_cooldown := 4
 @export_range(0.0, 1.0, 0.01) var max_grapple_slope := 0.4
+
+@export var wall_slide_speed := 3.0
+@export var wall_slide_friction := 8.0
+@export var wall_slide_stick := 10.0
+@export var wall_slide_grip := 4.0
+@export var wall_jump_velocity := 5.0
+@export var wall_jump_push := 8.0
 
 var is_sliding := false
 var slide_timer := 5
@@ -24,11 +31,19 @@ var grapple_timer := 0.0
 var grapple_target := Vector3.ZERO
 var _grapple_cooldown_timer := 0.0
 
+var is_wall_sliding := false
+var wall_normal := Vector3.ZERO
+
 @onready var camera_settings := $"Camera Settings"
 @onready var crosshair: TextureRect = $UI/Crosshair
+@onready var grapple_cd_bar: ProgressBar = $UI/GrappleCooldown
 
 func _physics_process(delta):
 	_grapple_cooldown_timer = maxf(0.0, _grapple_cooldown_timer - delta)
+
+	# Update grapple cooldown bar
+	grapple_cd_bar.visible = _grapple_cooldown_timer > 0.0
+	grapple_cd_bar.value = _grapple_cooldown_timer / grapple_cooldown
 
 	# Update crosshair — show green when a valid grapple target is in range
 	if not is_grappled:
@@ -62,6 +77,9 @@ func _physics_process(delta):
 		update_slide(delta)
 		move_and_slide()
 		return
+
+	# Wall slide / wall jump (state comes from the last move_and_slide)
+	handle_wall_slide(delta)
 
 	# Movement input
 	var input_dir := Input.get_vector(
@@ -175,6 +193,47 @@ func end_grapple(damp_velocity := false) -> void:
 		velocity.z *= 0.35
 		velocity.y *= 0.4
 		camera_settings.add_shake(0.05)
+
+
+func handle_wall_slide(delta) -> void:
+	if is_on_floor() or is_grappled:
+		is_wall_sliding = false
+		wall_normal = Vector3.ZERO
+		return
+
+	var normal := _detect_wall_normal()
+	if normal == Vector3.ZERO or velocity.y >= 0.0:
+		is_wall_sliding = false
+		wall_normal = Vector3.ZERO
+		return
+
+	is_wall_sliding = true
+	wall_normal = normal
+
+	# Cap the fall to a slow slide
+	if velocity.y < -wall_slide_speed:
+		velocity.y = move_toward(velocity.y, -wall_slide_speed, wall_slide_friction * delta)
+
+	# Stick to the wall — pull slightly toward it and bleed sideways speed
+	velocity += normal * wall_slide_grip * delta
+	velocity.x = move_toward(velocity.x, 0, wall_slide_stick * delta)
+	velocity.z = move_toward(velocity.z, 0, wall_slide_stick * delta)
+
+	# Wall jump away from the surface
+	if Input.is_action_just_pressed("jump"):
+		velocity.y = wall_jump_velocity
+		velocity += normal * wall_jump_push
+		is_wall_sliding = false
+		wall_normal = Vector3.ZERO
+
+
+func _detect_wall_normal() -> Vector3:
+	for i in get_slide_collision_count():
+		var normal: Vector3 = get_slide_collision(i).get_normal()
+		# Wall-like normals are nearly perpendicular to up (not floor/ceiling)
+		if absf(normal.dot(Vector3.UP)) < 0.5:
+			return normal
+	return Vector3.ZERO
 
 
 func start_slide():
