@@ -1,5 +1,5 @@
 78098b89c88a74ebe8c20117b8754620
-::res://::1789137081
+::res://::1789202752
 icon.svg::CompressedTexture2D::6327932704027235902::1789136748::1789137057::1::::<><><>0<>0<>5883aaf2d839132ef8479f450099fc79<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
 ::res://Assets/::1789137057
 License.txt::TextFile::-1::1789136748::0::1::::<><><>0<>0<><>::
@@ -123,10 +123,7 @@ window_tall_rounded_damaged.png::CompressedTexture2D::3089921264674276260::17891
 window_tall_rounded_lit.png::CompressedTexture2D::542259766346770653::1789136748::1789137057::1::::<><><>0<>0<>de735966a3aef1c7a82c81adf0cef621<>res://.godot/imported/window_tall_rounded_lit.png-61b83a1a803f2b7413fabf1abdfa171a.ctex::
 window_tall_vertical.png::CompressedTexture2D::7227879570008130835::1789136748::1789137057::1::::<><><>0<>0<>27647784bc51058498ec8994f5f404f9<>res://.godot/imported/window_tall_vertical.png-862e3cea088c74417d389c46b8109341.ctex::
 window_tall_vertical_lit.png::CompressedTexture2D::3791475258378506847::1789136748::1789137057::1::::<><><>0<>0<>5c89e2c4227635b94bfe42304f7c4e09<>res://.godot/imported/window_tall_vertical_lit.png-75d5c55166aa22343bf357546ecfd343.ctex::
-::res://Assets/PNG/Dark/::1789137058
-camera.gd::GDScript::3135747829368094690::1789136748::0::1::::<>Node3D<><>0<>0<><>::
-player.gd::GDScript::981919009431100436::1789136748::0::1::::<>CharacterBody3D<><>0<>0<><>::
-player.tscn::PackedScene::7636930183128838966::1789136748::0::1::::<><><>0<>0<><>::res://Player/player.gd<>res://Player/camera.gd
+::res://Assets/PNG/Dark/::1789141582
 texture_01.png::CompressedTexture2D::4345498998289784406::1789136748::1789137058::1::::<><><>0<>0<>5b06f774788fd034ceeccce7a858aedc<>res://.godot/imported/texture_01.png-138d5fefc614432a9d2096ad2283579d.ctex::
 texture_02.png::CompressedTexture2D::513807677391556124::1789136748::1789137058::1::::<><><>0<>0<>4eb0e17b2133e722fa33b9a58fe2660e<>res://.godot/imported/texture_02.png-1541f47e71c35c9bddbe246f8923cadb.ctex::
 texture_03.png::CompressedTexture2D::3153510693640564583::1789136748::1789137058::1::::<><><>0<>0<>e3edb862a25b1a61b32a7907d00a420e<>res://.godot/imported/texture_03.png-73186eb78554382b39d904270e3a18d4.ctex::
@@ -140,7 +137,6 @@ texture_10.png::CompressedTexture2D::8591937665878189823::1789136748::1789137058
 texture_11.png::CompressedTexture2D::3002047692835327215::1789136748::1789137058::1::::<><><>0<>0<>9c05655d710a59e942dfad40e3015295<>res://.godot/imported/texture_11.png-a74b180d80e81e04f6463e5bf69b7a46.ctex::
 texture_12.png::CompressedTexture2D::1706636091295783713::1789136748::1789137058::1::::<><><>0<>0<>ae64e3e0394f286581d0f13c272f322d<>res://.godot/imported/texture_12.png-f54cf18d4c05c1097d49db43332f6651.ctex::
 texture_13.png::CompressedTexture2D::3547049189663748875::1789136748::1789137058::1::::<><><>0<>0<>35421aaee48da61d16928e8b7255a482<>res://.godot/imported/texture_13.png-b641e1b2552f2269c25ec6a46552e5c2.ctex::
-world.tscn::PackedScene::1208144574036550881::1789136748::0::1::::<><><>0<>0<><>::uid://bfgjhd3bpyw1u::::res://Assets/kenney_prototype-textures/prototype_texture_dark.tres<>uid://dg2neh0k6unwg::::res://Player/player.tscn
 ::res://Assets/PNG/Green/::1789137058
 texture_01.png::CompressedTexture2D::3274976460713704154::1789136748::1789137058::1::::<><><>0<>0<>6fb7ec2dfc6a52c94f7ec9d2527f546d<>res://.godot/imported/texture_01.png-9af56de001360db53b00a3c4f63089b9.ctex::
 texture_02.png::CompressedTexture2D::1376604187728735693::1789136748::1789137058::1::::<><><>0<>0<>c67fdfbe31e04d87d43dc7f1c0417239<>res://.godot/imported/texture_02.png-5b2120d633662f6f6a959f0c3745dd3a.ctex::
@@ -225,11 +221,12 @@ texture_10.svg::CompressedTexture2D::6047689223800330595::1789136748::1789137057
 texture_11.svg::CompressedTexture2D::1367965245959431982::1789136748::1789137057::1::::<><><>0<>0<>7e1f4f715602d7bad5112f3668334f65<>res://.godot/imported/texture_11.svg-363375a6d891a5a37db681c8fe22fff6.ctex::
 texture_12.svg::CompressedTexture2D::7549474456629139560::1789136748::1789137057::1::::<><><>0<>0<>9b518d4120442618788be57d06cf27fd<>res://.godot/imported/texture_12.svg-30d990125ee150e5580231f7f1951ccc.ctex::
 texture_13.svg::CompressedTexture2D::9080324675066890868::1789136748::1789137057::1::::<><><>0<>0<>4d68f43d0daa27beeb254a593486ec3b<>res://.godot/imported/texture_13.svg-79332fe2f3fa7bf91550aa9442e96cc5.ctex::
-::res://Character (Player Test Sub)/::1789136748
+::res://Character (Player Test Sub)/::1789151043
 camera_settings.gd::GDScript::6238324374042323251::1789136748::0::1::::<>Node3D<><>0<>0<><>::
-player_(test).gd::GDScript::6468110374330977154::1789136748::0::1::::<>CharacterBody3D<><>0<>0<><>::
-player_(test).tscn::PackedScene::6958607666946017735::1789136748::0::1::::<><><>0<>0<><>::
-::res://Test Area (World)/::1789136748
-camera_settings.gd::GDScript::1450022581074812688::1789137028::0::1::::<>Node3D<><>0<>0<><>::
-player_(test).tscn::PackedScene::7590122675912636861::1789136748::0::1::::<><><>0<>0<><>::uid://cyfg3k13d4fkc::::res://Character (Player Test Sub)/player_(test).gd<>uid://uwnwpa8croaq::::res://Test Area (World)/camera_settings.gd
-test_area.tscn::PackedScene::949812750602590352::1789136748::0::1::::<><><>0<>0<><>::uid://bmsmssijff3r7::::res://Assets/PNG/Dark/texture_05.png<>uid://dgeyhgsoq3k8t::::res://Test Area (World)/player_(test).tscn
+crosshair.gd::GDScript::2648161123983146662::1789141582::0::1::::<>TextureRect<><>0<>0<><>::
+grapple_rope.tscn::PackedScene::2637462109290443580::1789151043::0::1::::<><><>0<>0<><>::res://Character (Player Test Sub)/grapple_rope.gd
+player_(test).gd::GDScript::6468110374330977154::1789151564::0::1::::<>CharacterBody3D<><>0<>0<><>::
+::res://Test Area (World)/::1789150598
+camera_settings.gd::GDScript::1450022581074812688::1789150902::0::1::::<>Node3D<><>0<>0<><>::
+player_(test).tscn::PackedScene::7590122675912636861::1789151570::0::1::::<><><>0<>0<><>::uid://cyfg3k13d4fkc::::res://Character (Player Test Sub)/player_(test).gd<>uid://uwnwpa8croaq::::res://Test Area (World)/camera_settings.gd<>res://Character (Player Test Sub)/crosshair.gd
+test_area.tscn::PackedScene::949812750602590352::1789150598::0::1::::<><><>0<>0<><>::uid://bmsmssijff3r7::::res://Assets/PNG/Dark/texture_05.png<>uid://dgeyhgsoq3k8t::::res://Test Area (World)/player_(test).tscn
