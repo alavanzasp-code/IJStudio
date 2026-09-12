@@ -208,6 +208,15 @@ func update_grapple(delta):
 	var pull_dir := (grapple_target - pull_point).normalized()
 	velocity += pull_dir * grapple_accel * delta
 
+	# Face toward the anchor while pulling
+	var flat_pull := Vector3(pull_dir.x, 0, pull_dir.z)
+	if flat_pull.length_squared() > 0.001:
+		rotation.y = lerp_angle(
+			rotation.y,
+			atan2(-flat_pull.x, -flat_pull.z),
+			clampf(facing_turn_speed * delta, 0.0, 1.0),
+		)
+
 	# Approaching shake — stronger when fast, fades as we get closer
 	var dist := pull_point.distance_to(grapple_target)
 	var speed := velocity.length()
