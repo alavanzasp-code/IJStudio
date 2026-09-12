@@ -2,8 +2,15 @@ extends CharacterBody3D
 
 @export var walk_speed := 5.0
 @export var sprint_speed := 15.0
+@export var sprint_accel := 7.0
 @export var acceleration := 15.0
 @export var jump_velocity := 3
+
+@export var deceleration := 11.0
+@export var air_control := 0.35
+@export var air_friction := 0.05
+@export var backwalk_speed_ratio := 0.6
+@export var strafe_speed_ratio := 0.85
 
 @export var slide_speed := 20.0
 @export var slide_duration := 2.0
@@ -87,38 +94,58 @@ func _physics_process(delta):
 		"right",
 		"up",
 		"down",
-	)   
+	)
 
-	var direction := Vector3(input_dir.x, 0, input_dir.y)
+	var motion_local := Vector3(input_dir.x, 0, input_dir.y)
+	var has_input := motion_local.length_squared() > 0.0
+	if has_input:
+		motion_local = motion_local.normalized()
 
-	# Convert input relative to player
-	direction = transform.basis * direction
-	direction.y = 0
-	direction = direction.normalized()
+	# Body follows the crosshair, so input is already relative to where the
+	# player is aimed — motion goes exactly where held, no turn damping.
+	var wish_dir := (transform.basis * motion_local)
+	wish_dir.y = 0
 
-	# Sprint or walk
-	var target_speed := sprint_speed if is_sprinting() else walk_speed
+	# In the air you only get a fraction of steering and thrust — no mid-air darting
+	var control := air_control if not is_on_floor() else 1.0
 
-	if direction:
-		velocity.x = move_toward(
-			velocity.x,
-			direction.x * target_speed,
-			acceleration * delta
-		)
-		velocity.z = move_toward(
-			velocity.z,
-			direction.z * target_speed,
-			acceleration * delta
-		)
+	if has_input:
+		# Sprint only counts when actually running forward — side and back
+		# input are side-walking and always stay at walking speed.
+		var forward_amount := -input_dir.y
+		var is_forward := forward_amount > 0.0 and absf(input_dir.x) <= forward_amount * 1.25
+		var is_sprinting_now := is_sprinting() and is_forward
+
+		var base_speed := sprint_speed if is_sprinting_now else walk_speed
+		var accel := sprint_accel if is_sprinting_now else acceleration
+		var cruise_speed := base_speed * _movement_speed_ratio(input_dir)
+
+		var target_velocity := wish_dir * cruise_speed
+		velocity.x = move_toward(velocity.x, target_velocity.x, accel * control * delta)
+		velocity.z = move_toward(velocity.z, target_velocity.z, accel * control * delta)
 	else:
-		velocity.x = move_toward(velocity.x, 0, acceleration * delta)
-		velocity.z = move_toward(velocity.z, 0, acceleration * delta)
+		# No input — friction bleeds the momentum off instead of cutting it
+		var drag := deceleration if is_on_floor() else air_friction
+		velocity.x = move_toward(velocity.x, 0, drag * delta)
+		velocity.z = move_toward(velocity.z, 0, drag * delta)
 
 	move_and_slide()
 
 
 func is_sprinting() -> bool:
 	return Input.is_action_pressed("sprint")
+
+
+func _movement_speed_ratio(input_dir: Vector2) -> float:
+	# Backpedaling and side-walking are slower than running forward
+	var forward_amount := -input_dir.y
+	var sideways_amount: float = absf(input_dir.x)
+
+	if forward_amount < 0.0:
+		return backwalk_speed_ratio
+	if sideways_amount > forward_amount * 1.25:
+		return strafe_speed_ratio
+	return 1.0
 
 
 func raycast_grapple() -> Dictionary:
