@@ -10,8 +10,7 @@ extends CharacterBody3D
 @export var deceleration := 11.0
 @export var air_control := 0.35
 @export var air_friction := 0.05
-@export var backwalk_speed_ratio := 0.6
-@export var strafe_speed_ratio := 0.85
+@export var facing_turn_speed := 15.0
 
 @export var slide_speed := 20.0
 @export var slide_duration := 2.0
@@ -24,6 +23,7 @@ extends CharacterBody3D
 @export_range(0.0, 1.0, 0.01) var max_grapple_slope := 0.4
 
 @export var wall_slide_speed := 3.0
+@export var wall_slide_grab := 30.0
 @export var wall_slide_friction := 8.0
 @export var wall_slide_stick := 10.0
 @export var wall_slide_grip := 4.0
@@ -89,7 +89,8 @@ func _physics_process(delta):
 	# Wall slide / wall jump (state comes from the last move_and_slide)
 	handle_wall_slide(delta)
 
-	# Movement input
+	# Movement input is relative to the camera aim, not the body — the model
+	# turns itself to follow the direction of travel.
 	var input_dir := Input.get_vector(
 		"left",
 		"right",
@@ -97,32 +98,38 @@ func _physics_process(delta):
 		"down",
 	)
 
-	var motion_local := Vector3(input_dir.x, 0, input_dir.y)
-	var has_input := motion_local.length_squared() > 0.0
-	if has_input:
-		motion_local = motion_local.normalized()
+	var has_input := input_dir.length_squared() > 0.0
 
-	# Body follows the crosshair, so input is already relative to where the
-	# player is aimed — motion goes exactly where held, no turn damping.
-	var wish_dir := (transform.basis * motion_local)
+	# Project input onto the camera's ground-plane axes
+	var camera := get_viewport().get_camera_3d()
+	var cam_forward := -camera.global_transform.basis.z
+	cam_forward.y = 0
+	var cam_right := camera.global_transform.basis.x
+	cam_right.y = 0
+	var wish_dir := cam_right * input_dir.x - cam_forward * input_dir.y
 	wish_dir.y = 0
+	if has_input:
+		wish_dir = wish_dir.normalized()
 
 	# In the air you only get a fraction of steering and thrust — no mid-air darting
 	var control := air_control if not is_on_floor() else 1.0
 
 	if has_input:
-		# Sprint only counts when actually running forward — side and back
-		# input are side-walking and always stay at walking speed.
-		var forward_amount := -input_dir.y
-		var is_forward := forward_amount > 0.0 and absf(input_dir.x) <= forward_amount * 1.25
-		var is_sprinting_now := is_sprinting() and is_forward
-
+		# Sprint is available in whatever direction you're heading
+		var is_sprinting_now := is_sprinting()
 		var base_speed := sprint_speed if is_sprinting_now else walk_speed
 		var accel := sprint_accel if is_sprinting_now else acceleration
-		var cruise_speed := base_speed * _movement_speed_ratio(input_dir)
+
+		# Full character rotation — the model turns to face where it's going
+		var facing_yaw: float = atan2(-wish_dir.x, -wish_dir.z)
+		rotation.y = lerp_angle(
+			rotation.y,
+			facing_yaw,
+			clampf(facing_turn_speed * delta, 0.0, 1.0),
+		)
 
 		# Snappy turns — residual sideways drift left over from the old heading
-		# is damped hard so the body follows the crosshair instead of sliding.
+		# is damped hard so the body follows the input instead of sliding.
 		var perp := Vector3(velocity.x, 0, velocity.z)
 		perp -= wish_dir * perp.dot(wish_dir)
 		if perp.length_squared() > 0.0001:
@@ -130,7 +137,7 @@ func _physics_process(delta):
 			velocity.x -= perp.x * damp
 			velocity.z -= perp.z * damp
 
-		var target_velocity := wish_dir * cruise_speed
+		var target_velocity := wish_dir * base_speed
 		velocity.x = move_toward(velocity.x, target_velocity.x, accel * control * delta)
 		velocity.z = move_toward(velocity.z, target_velocity.z, accel * control * delta)
 	else:
@@ -144,18 +151,6 @@ func _physics_process(delta):
 
 func is_sprinting() -> bool:
 	return Input.is_action_pressed("sprint")
-
-
-func _movement_speed_ratio(input_dir: Vector2) -> float:
-	# Backpedaling and side-walking are slower than running forward
-	var forward_amount := -input_dir.y
-	var sideways_amount: float = absf(input_dir.x)
-
-	if forward_amount < 0.0:
-		return backwalk_speed_ratio
-	if sideways_amount > forward_amount * 1.25:
-		return strafe_speed_ratio
-	return 1.0
 
 
 func raycast_grapple() -> Dictionary:
@@ -228,7 +223,8 @@ func end_grapple(damp_velocity := false) -> void:
 		# Landing damp — bleed off the incoming pull so we don't slam the wall
 		velocity.x *= 0.35
 		velocity.z *= 0.35
-		velocity.y *= 0.4
+		# Never leave upward momentum — it hovers the player on the wall face
+		velocity.y = minf(velocity.y * 0.4, 0.0)
 		camera_settings.add_shake(0.05)
 
 
@@ -247,9 +243,14 @@ func handle_wall_slide(delta) -> void:
 	is_wall_sliding = true
 	wall_normal = normal
 
-	# Cap the fall to a slow slide
-	if velocity.y < -wall_slide_speed:
-		velocity.y = move_toward(velocity.y, -wall_slide_speed, wall_slide_friction * delta)
+	# Cap the fall to a slow slide — but never cling when first catching the
+	# wall: start dropping immediately instead of drifting down lazily.
+	if velocity.y > -wall_slide_speed:
+		velocity.y = move_toward(
+			velocity.y,
+			-wall_slide_speed,
+			wall_slide_grab * delta,
+		)
 
 	# Stick to the wall — pull slightly toward it and bleed sideways speed
 	velocity += normal * wall_slide_grip * delta
