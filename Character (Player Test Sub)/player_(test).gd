@@ -4,23 +4,30 @@ extends CharacterBody3D
 @export var sprint_speed := 15.0
 @export var sprint_accel := 9.0
 @export var acceleration := 20.0
-@export var jump_velocity := 3
+@export var jump_velocity := 4.3
+@export var gravity := 20.0
+@export var max_fall_speed := 60.0
 
-@export var turn_response := 25.0
 @export var deceleration := 11.0
 @export var air_control := 0.35
 @export var air_friction := 0.05
+@export var turn_accel := 35.0
+@export var brake_accel := 45.0
 @export var facing_turn_speed := 15.0
 
 @export var slide_speed := 20.0
 @export var slide_duration := 2.0
 
 @export var grapple_range := 30.0
-@export var grapple_duration := 1.4
 @export var grapple_accel := 30.0
+@export var grapple_pull_speed := 16.0
+@export var grapple_fling_boost := 1.3
 @export var grapple_cancel_distance := 1.0
 @export var grapple_cooldown := 4
 @export_range(0.0, 1.0, 0.01) var max_grapple_slope := 0.4
+
+@export var wall_attach_push := 6.0
+@export var wall_attach_hop := 3.0
 
 @export var wall_slide_speed := 3.0
 @export var wall_slide_grab := 30.0
@@ -35,9 +42,11 @@ var slide_timer := 5
 var slide_direction := Vector3.ZERO
 
 var is_grappled := false
-var grapple_timer := 0.0
 var grapple_target := Vector3.ZERO
+var grapple_surface_normal := Vector3.UP
 var _grapple_cooldown_timer := 0.0
+
+var is_wall_attached := false
 
 var is_wall_sliding := false
 var wall_normal := Vector3.ZERO
@@ -62,9 +71,17 @@ func _physics_process(delta):
 		move_and_slide()
 		return
 
-	# Gravity
+	if is_wall_attached:
+		var released := update_wall_attach(delta)
+		if not released:
+			velocity = Vector3.ZERO
+		move_and_slide()
+		return
+
+	# Gravity — fixed constant, falling builds into a heavy terminal drop
 	if not is_on_floor():
-		velocity += get_gravity() * delta
+		velocity.y -= gravity * delta
+		velocity.y = maxf(velocity.y, -max_fall_speed)
 
 	# Jump
 	if Input.is_action_just_pressed("jump") and is_on_floor() and not is_sliding:
@@ -118,7 +135,7 @@ func _physics_process(delta):
 		# Sprint is available in whatever direction you're heading
 		var is_sprinting_now := is_sprinting()
 		var base_speed := sprint_speed if is_sprinting_now else walk_speed
-		var accel := sprint_accel if is_sprinting_now else acceleration
+		var build := sprint_accel if is_sprinting_now else acceleration
 
 		# Full character rotation — the model turns to face where it's going
 		var facing_yaw: float = atan2(-wish_dir.x, -wish_dir.z)
@@ -128,14 +145,22 @@ func _physics_process(delta):
 			clampf(facing_turn_speed * delta, 0.0, 1.0),
 		)
 
-		# Snappy turns — residual sideways drift left over from the old heading
-		# is damped hard so the body follows the input instead of sliding.
-		var perp := Vector3(velocity.x, 0, velocity.z)
-		perp -= wish_dir * perp.dot(wish_dir)
-		if perp.length_squared() > 0.0001:
-			var damp: float = clampf(turn_response * control * delta, 0.0, 1.0)
-			velocity.x -= perp.x * damp
-			velocity.z -= perp.z * damp
+		# Direction changes keep their momentum instead of restarting a ramp:
+		# a hard brake flips full reversals in under a second, and a strong
+		# thrust snaps onto a new heading without bleeding speed.
+		var flat_velocity := Vector3(velocity.x, 0, velocity.z)
+		var flat_speed := flat_velocity.length()
+		var along := flat_velocity.dot(wish_dir)
+
+		var accel := build
+		if flat_speed > 0.5:
+			var deviation := flat_velocity.normalized().angle_to(wish_dir)
+			if deviation > deg_to_rad(35.0):
+				accel = brake_accel if along < 0.0 else turn_accel
+			elif flat_speed > base_speed * 0.5:
+				accel = maxf(build, turn_accel)
+			else:
+				accel = build
 
 		var target_velocity := wish_dir * base_speed
 		velocity.x = move_toward(velocity.x, target_velocity.x, accel * control * delta)
@@ -178,8 +203,8 @@ func try_start_grapple() -> bool:
 		return false
 
 	is_grappled = true
-	grapple_timer = grapple_duration
 	grapple_target = hit.position
+	grapple_surface_normal = hit.normal
 	is_sliding = false
 	velocity.x *= 0.2
 	velocity.z *= 0.2
@@ -189,24 +214,27 @@ func try_start_grapple() -> bool:
 
 
 func update_grapple(delta):
-	grapple_timer -= delta
+	var pull_point := global_position + Vector3(0, 0.6, 0)
 
+	# Jumping mid-grapple flings you off with the carried momentum
 	if Input.is_action_just_pressed("jump"):
 		end_grapple()
+		velocity.x *= grapple_fling_boost
+		velocity.z *= grapple_fling_boost
 		return
 
-	var pull_point := global_position + Vector3(0, 0.6, 0)
-	if grapple_timer <= 0.0:
-		end_grapple()
-		return
-
+	# Fully reached the wall — attach and cling instead of bouncing off
 	if pull_point.distance_to(grapple_target) <= grapple_cancel_distance:
-		end_grapple(true)
+		attach_to_wall()
 		return
 
 	# Pull the player toward the anchor point
 	var pull_dir := (grapple_target - pull_point).normalized()
 	velocity += pull_dir * grapple_accel * delta
+
+	# Cap the pull so a normal catch never turns into a fling
+	if velocity.length() > grapple_pull_speed:
+		velocity *= grapple_pull_speed / velocity.length()
 
 	# Face toward the anchor while pulling
 	var flat_pull := Vector3(pull_dir.x, 0, pull_dir.z)
@@ -221,6 +249,33 @@ func update_grapple(delta):
 	var dist := pull_point.distance_to(grapple_target)
 	var speed := velocity.length()
 	camera_settings.add_shake(speed * 0.002 * clampf(dist / 15.0, 0.0, 1.0))
+
+
+func attach_to_wall() -> void:
+	is_grappled = false
+	is_wall_attached = true
+	velocity = Vector3.ZERO
+	_grapple_cooldown_timer = grapple_cooldown
+	camera_settings.set_grappling(false)
+	camera_settings.add_shake(0.08)
+
+
+func update_wall_attach(_delta: float) -> bool:
+	if is_on_floor():
+		is_wall_attached = false
+		return true
+
+	# Jump breaks the grip and flings off the surface
+	if Input.is_action_just_pressed("jump"):
+		is_wall_attached = false
+		velocity = grapple_surface_normal * wall_attach_push
+		velocity.y = wall_attach_hop
+		_grapple_cooldown_timer = 0.2
+		camera_settings.set_grappling(false)
+		camera_settings.add_shake(0.1)
+		return true
+
+	return false
 
 
 func end_grapple(damp_velocity := false) -> void:
@@ -238,7 +293,7 @@ func end_grapple(damp_velocity := false) -> void:
 
 
 func handle_wall_slide(delta) -> void:
-	if is_on_floor() or is_grappled:
+	if is_on_floor() or is_grappled or is_wall_attached:
 		is_wall_sliding = false
 		wall_normal = Vector3.ZERO
 		return
