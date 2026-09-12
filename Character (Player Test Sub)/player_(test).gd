@@ -2,10 +2,11 @@ extends CharacterBody3D
 
 @export var walk_speed := 5.0
 @export var sprint_speed := 15.0
-@export var sprint_accel := 7.0
-@export var acceleration := 15.0
+@export var sprint_accel := 9.0
+@export var acceleration := 20.0
 @export var jump_velocity := 3
 
+@export var turn_response := 25.0
 @export var deceleration := 11.0
 @export var air_control := 0.35
 @export var air_friction := 0.05
@@ -119,6 +120,15 @@ func _physics_process(delta):
 		var base_speed := sprint_speed if is_sprinting_now else walk_speed
 		var accel := sprint_accel if is_sprinting_now else acceleration
 		var cruise_speed := base_speed * _movement_speed_ratio(input_dir)
+
+		# Snappy turns — residual sideways drift left over from the old heading
+		# is damped hard so the body follows the crosshair instead of sliding.
+		var perp := Vector3(velocity.x, 0, velocity.z)
+		perp -= wish_dir * perp.dot(wish_dir)
+		if perp.length_squared() > 0.0001:
+			var damp: float = clampf(turn_response * control * delta, 0.0, 1.0)
+			velocity.x -= perp.x * damp
+			velocity.z -= perp.z * damp
 
 		var target_velocity := wish_dir * cruise_speed
 		velocity.x = move_toward(velocity.x, target_velocity.x, accel * control * delta)
