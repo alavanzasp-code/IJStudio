@@ -2,7 +2,7 @@ class_name Arrow
 extends RigidBody3D
 
 @export var lifetime := 20.0
-@export var arrow_gravity := 0.9
+@export var arrow_gravity := 0.4
 
 var _frozen := false
 
@@ -14,6 +14,13 @@ func _ready() -> void:
 	continuous_cd = true
 	gravity_scale = arrow_gravity
 	body_entered.connect(_on_body_entered)
+
+	# Arrows never collide with each other — otherwise volleys clump into an
+	# arrow train mid-air and pile into stacks on impact.
+	add_to_group("arrow")
+	for other: Node in get_tree().get_nodes_in_group("arrow"):
+		if other != self:
+			add_collision_exception_with(other)
 
 	var col := get_node_or_null("CollisionShape3D")
 	if col is CollisionShape3D:
@@ -81,8 +88,10 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	state.transform = t
 
 
-func _on_body_entered(_body: Node) -> void:
+func _on_body_entered(body: Node) -> void:
 	if _frozen:
+		return
+	if body is Arrow:
 		return
 	_frozen = true
 	freeze = true

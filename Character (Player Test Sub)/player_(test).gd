@@ -137,13 +137,17 @@ func _physics_process(delta):
 		var base_speed := sprint_speed if is_sprinting_now else walk_speed
 		var build := sprint_accel if is_sprinting_now else acceleration
 
-		# Full character rotation — the model turns to face where it's going
-		var facing_yaw: float = atan2(-wish_dir.x, -wish_dir.z)
-		rotation.y = lerp_angle(
-			rotation.y,
-			facing_yaw,
-			clampf(facing_turn_speed * delta, 0.0, 1.0),
-		)
+		# Full character rotation — the model turns to face where it's going.
+		# While aiming/shooting the bow drives the facing onto the crosshair, so
+		# the body must not keep swinging toward the movement direction (that
+		# made the bow jerk around while strafing).
+		if not _is_fighting_stance():
+			var facing_yaw: float = atan2(-wish_dir.x, -wish_dir.z)
+			rotation.y = lerp_angle(
+				rotation.y,
+				facing_yaw,
+				clampf(facing_turn_speed * delta, 0.0, 1.0),
+			)
 
 		# Direction changes keep their momentum instead of restarting a ramp:
 		# a hard brake flips full reversals in under a second, and a strong
@@ -176,6 +180,14 @@ func _physics_process(delta):
 
 func is_sprinting() -> bool:
 	return Input.is_action_pressed("sprint")
+
+
+# True while the bow is aimed or being drawn — the body stays locked onto the
+# crosshair instead of turning with the movement direction.
+func _is_fighting_stance() -> bool:
+	if Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+		return false
+	return Input.is_action_pressed("aim") or Input.is_action_pressed("shoot")
 
 
 func raycast_grapple() -> Dictionary:
