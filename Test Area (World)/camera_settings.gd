@@ -4,6 +4,7 @@ extends Node3D
 @export_range(1.0, 89.0, 1.0) var max_pitch_degrees := 85.0
 @export var base_fov := 75.0
 @export var max_fov := 100.0
+@export var aim_fov := 50.0
 @export var fov_lerp_speed := 8.0
 @export var camera_margin := 0.2
 @export var min_camera_distance := 0.4
@@ -54,6 +55,8 @@ func _process(delta: float) -> void:
 		var speed := Vector3(character.velocity.x, 0, character.velocity.z).length()
 		var normalized := clampf(speed / 30.0, 0.0, 1.0)
 		target_fov = lerpf(base_fov, max_fov, normalized * normalized)
+	if Input.is_action_pressed("aim") and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+		target_fov = aim_fov
 	camera_3d.fov = lerpf(camera_3d.fov, target_fov, fov_lerp_speed * delta)
 
 	apply_camera_collision()

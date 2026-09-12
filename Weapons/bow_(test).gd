@@ -4,8 +4,11 @@ extends Node3D
 const ARROW_SCENE: PackedScene = preload("res://Weapons/arrow_(test).tscn")
 
 @export var draw_time := 0.55
-@export var arrow_speed := 26.0
+@export var arrow_min_speed := 22.0
+@export var arrow_max_speed := 55.0
 @export_range(0.0, 1.0, 0.01) var min_charge := 0.4
+@export var aim_turn_speed := 15.0
+@export var aim_rotate_speed := 20.0
 
 var _draw := 0.0
 var _string: MeshInstance3D
@@ -35,24 +38,38 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var drawing := (
-		Input.is_action_pressed("shoot")
-		and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED
-	)
+	var mouse_captured := Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED
+	var aiming := Input.is_action_pressed("aim") and mouse_captured
+	var shooting := Input.is_action_pressed("shoot") and mouse_captured
 
-	if drawing:
+	if shooting:
 		_draw = clampf(_draw + delta / draw_time, 0.0, 1.0)
 	elif _draw > 0.0:
 		fire()
 		_draw = 0.0
 
-	_aim_bow()
+	if aiming or shooting:
+		var dir: Vector3 = _aim_ray().normal
+		_rotate_player_toward(dir, delta)
+		_orient_bow(dir, delta)
+	else:
+		_reset_bow_local()
+
 	_update_draw_visual(delta)
 
 
 func fire() -> void:
-	var dir := -global_transform.basis.z
-	var origin := global_position + dir * 0.12
+	var ray := _aim_ray()
+	var dir: Vector3 = ray.normal
+
+	# Snap the player and bow onto the cursor so the shot leaves true.
+	_rotate_player_toward(dir, 1.0)
+	_orient_bow(dir, 1.0)
+
+	# Spawn the arrow ON the crosshair ray (just ahead of the bow). The bow's
+	# own offset — which grows while moving/turning — would otherwise shift the
+	# whole trajectory off the crosshair.
+	var origin: Vector3 = ray.origin + dir * (maxf((global_position - ray.origin).length(), 1.2) + 0.5)
 
 	var arrow: RigidBody3D = ARROW_SCENE.instantiate()
 	get_tree().current_scene.add_child(arrow)
@@ -65,20 +82,50 @@ func fire() -> void:
 		arrow.add_collision_exception_with(_player)
 
 	var charge := maxf(_draw, min_charge)
-	arrow.linear_velocity = dir * (arrow_speed * charge)
+	arrow.linear_velocity = dir * lerpf(arrow_min_speed, arrow_max_speed, charge)
 
 	if _camera_settings != null and _camera_settings.has_method("add_shake"):
 		_camera_settings.add_shake(0.05 + charge * 0.03)
 
 
-func _aim_bow() -> void:
-	var dir := -_camera.global_transform.basis.z
+func _aim_ray() -> Dictionary:
+	var center := _camera.get_viewport().get_visible_rect().size * 0.5
+	return {
+		"origin": _camera.project_ray_origin(center),
+		"normal": _camera.project_ray_normal(center),
+	}
+
+
+# Turn the player body so it (and the bow glued to it) faces the crosshair.
+func _rotate_player_toward(dir: Vector3, delta: float) -> void:
+	var flat := Vector3(dir.x, 0.0, dir.z)
+	if flat.length_squared() < 0.0001:
+		return
+	var target_yaw := atan2(-flat.x, -flat.z)
+	_player.rotation.y = lerp_angle(
+		_player.rotation.y,
+		target_yaw,
+		clampf(aim_turn_speed * delta, 0.0, 1.0),
+	)
+
+
+# Aim the bow itself along the crosshair direction.
+func _orient_bow(dir: Vector3, delta: float) -> void:
 	var up := Vector3.UP
 	if absf(dir.dot(Vector3.UP)) > 0.99:
 		up = Vector3.FORWARD
+	var target_basis := Basis.looking_at(dir, up)
+	var k := clampf(aim_rotate_speed * delta, 0.0, 1.0)
 	var t := global_transform
-	t.basis = Basis.looking_at(dir, up)
+	t.basis = global_transform.basis.slerp(target_basis, k)
 	global_transform = t
+
+
+# Rest state — the bow stays held along the player's facing, no self-rotation.
+func _reset_bow_local() -> void:
+	var t := transform
+	t.basis = Basis.IDENTITY
+	transform = t
 
 
 func _update_draw_visual(delta: float) -> void:
