@@ -2,6 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://bmsmssijff3r7" path="res://Assets/PNG/Dark/texture_05.png" id="1_p57bx"]
 [ext_resource type="PackedScene" uid="uid://dgeyhgsoq3k8t" path="res://Test Area (World)/player_(test).tscn" id="2_0lty6"]
+[ext_resource type="PackedScene" path="res://Dummies/dummy_(test).tscn" id="3_dummy"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_p57bx"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -78,6 +79,31 @@ shadow_enabled = true
 
 [node name="Player (Test)" parent="." unique_id=1302519365 instance=ExtResource("2_0lty6")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3553977, 0)
+
+[node name="DummyGround" parent="." instance=ExtResource("3_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.15, -4)
+body_color = Color(0.25, 0.55, 0.95, 1)
+
+[node name="DummyTank" parent="." instance=ExtResource("3_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.15, -4)
+indestructible = true
+respawn_enabled = false
+body_color = Color(0.6, 0.6, 0.62, 1)
+
+[node name="DummyMover" parent="." instance=ExtResource("3_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, -7)
+movement_enabled = true
+movement_speed = 2.5
+patrol_distance = 8.0
+body_color = Color(0.3, 0.8, 0.35, 1)
+
+[node name="DummyFlyer" parent="." instance=ExtResource("3_dummy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.15, 4)
+flying = true
+fly_radius = 3.0
+fly_speed = 4.0
+fly_height = 3.0
+body_color = Color(0.95, 0.55, 0.2, 1)
 
 [node name="Arena" type="StaticBody3D" parent="." unique_id=1964907056]
 
