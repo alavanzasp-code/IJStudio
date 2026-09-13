@@ -18,6 +18,7 @@ var view_is_left := false
 var view_tween: Tween
 var _shake_offset := Vector2.ZERO
 var _is_grappling := false
+var _cutscene_active := false
 var _view_x := 0.0
 var _base_camera_pos := Vector3.ZERO
 
@@ -38,10 +39,13 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	# The camera holds its own world-space yaw. The body rotates toward its
-	# movement direction, so compensate here or the view would swing with it.
-	rotation.y = yaw - character.rotation.y
-	rotation.x = pitch
+	# A cutscene animation (execution) drives the camera directly, so the
+	# camera script must step aside while it plays.
+	if not _cutscene_active:
+		# The camera holds its own world-space yaw. The body rotates toward its
+		# movement direction, so compensate here or the view would swing with it.
+		rotation.y = yaw - character.rotation.y
+		rotation.x = pitch
 
 	_shake_offset = _shake_offset.lerp(Vector2.ZERO, 10.0 * delta)
 	camera_3d.h_offset = _shake_offset.x
@@ -50,16 +54,17 @@ func _process(delta: float) -> void:
 	if not character:
 		return
 
-	var target_fov := base_fov
-	if _is_grappling:
-		var speed := Vector3(character.velocity.x, 0, character.velocity.z).length()
-		var normalized := clampf(speed / 30.0, 0.0, 1.0)
-		target_fov = lerpf(base_fov, max_fov, normalized * normalized)
-	if Input.is_action_pressed("aim") and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-		target_fov = aim_fov
-	camera_3d.fov = lerpf(camera_3d.fov, target_fov, fov_lerp_speed * delta)
+	if not _cutscene_active:
+		var target_fov := base_fov
+		if _is_grappling:
+			var speed := Vector3(character.velocity.x, 0, character.velocity.z).length()
+			var normalized := clampf(speed / 30.0, 0.0, 1.0)
+			target_fov = lerpf(base_fov, max_fov, normalized * normalized)
+		if Input.is_action_pressed("aim") and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+			target_fov = aim_fov
+		camera_3d.fov = lerpf(camera_3d.fov, target_fov, fov_lerp_speed * delta)
 
-	apply_camera_collision()
+		apply_camera_collision()
 
 
 func apply_camera_collision() -> void:
@@ -85,6 +90,10 @@ func apply_camera_collision() -> void:
 
 func set_grappling(active: bool) -> void:
 	_is_grappling = active
+
+
+func set_cutscene(active: bool) -> void:
+	_cutscene_active = active
 
 
 func add_shake(intensity: float) -> void:

@@ -13,6 +13,7 @@ const ARROW_SCENE: PackedScene = preload("res://Weapons/arrow_(test).tscn")
 @export var aim_rotate_speed := 20.0
 
 var _draw := 0.0
+var _enemy_draw := false
 var _string: MeshInstance3D
 var _nock: Node3D
 
@@ -39,7 +40,38 @@ func _ready() -> void:
 	_build_bow()
 
 
+func set_enemy_draw(active: bool) -> void:
+	_enemy_draw = active
+
+
 func _physics_process(delta: float) -> void:
+	var busy := false
+	if _player != null:
+		busy = bool(_player.call("player_is_busy"))
+
+	if busy:
+		if _enemy_draw:
+			# During the enemy reel the bow draws an arrow and tracks the
+			# target — but never releases it (LMB runs the player's finisher).
+			_draw = clampf(_draw + delta / draw_time, 0.0, 1.0)
+			var enemy: Node = _player.call("get_grapple_enemy")
+			if enemy is Node3D:
+				var dir: Vector3 = ((enemy as Node3D).global_position - global_position).normalized()
+				_rotate_player_toward(dir, delta)
+				_orient_bow(dir, delta)
+			_update_draw_visual(delta)
+		else:
+			# Execution strike — keep the bow stowed at rest.
+			_draw = 0.0
+			_update_draw_visual(1.0)
+		return
+
+	if _enemy_draw:
+		# Left the hold — drop the drawn pose without firing an arrow.
+		_enemy_draw = false
+		_draw = 0.0
+		_update_draw_visual(1.0)
+
 	var mouse_captured := Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED
 	var aiming := Input.is_action_pressed("aim") and mouse_captured
 	var shooting := Input.is_action_pressed("shoot") and mouse_captured
@@ -82,6 +114,7 @@ func fire() -> void:
 	arrow.global_transform = Transform3D(Basis.looking_at(dir, up), origin)
 	if _player != null:
 		arrow.add_collision_exception_with(_player)
+		arrow.set_source(_player)
 
 	# Nonlinear ramp: a tap only reaches ~half the max speed, so drawn shots
 	# gain real travel power — but the tap still flies a usable distance.

@@ -15,6 +15,114 @@ size = Vector3(0.12, 0.12, 0.56921387)
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_facing"]
 albedo_color = Color(1, 0.35, 0.1, 1)
 
+[sub_resource type="Animation" id="Animation_vfs3b"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Camera Settings/Camera3D:fov")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [75.0]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Camera Settings/Camera3D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Camera Settings/Camera3D:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(1, 1, 1)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Camera Settings/Camera3D:position")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(1.0335541, 1.2116957, 3.9702067)]
+}
+
+[sub_resource type="Animation" id="Animation_g76h0"]
+resource_name = "execute"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Camera Settings/Camera3D:fov")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.16666667, 0.55),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [75.0, 112.0, 74.0]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Camera Settings/Camera3D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.13333334, 0.43333334),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0.0034779625, 0.026585216, -0.26015413), Vector3(-0.17250864, 2.3539977, -0.18962805)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Camera Settings/Camera3D:scale")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(1, 1, 1)]
+}
+tracks/3/type = "value"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("Camera Settings/Camera3D:position")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.53333336),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(1.0335541, 1.2116957, 3.9702067), Vector3(1.0335541, 1.3050091, 3.0672328), Vector3(2.1639771, 0.9187417, -2.0376096)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_3lxhc"]
+_data = {
+&"RESET": SubResource("Animation_vfs3b"),
+&"execute": SubResource("Animation_g76h0")
+}
+
 [node name="Player (Test)" type="CharacterBody3D" unique_id=1302519365]
 script = ExtResource("1_5b8i2")
 
@@ -27,13 +135,11 @@ shape = SubResource("CapsuleShape3D_mltf8")
 
 [node name="PlayerBody_Placeholder" type="MeshInstance3D" parent="." unique_id=394142981]
 mesh = SubResource("CapsuleMesh_mltf8")
-; TODO: Assign model asset (.glb) — replace placeholder capsule with instanced player model.
 
 [node name="FacingMarker" type="MeshInstance3D" parent="." unique_id=1368285233]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -0.23460692)
 mesh = SubResource("BoxMesh_facing")
 surface_material_override/0 = SubResource("StandardMaterial3D_facing")
-; TODO: Assign model asset (.glb) — replace placeholder facing indicator.
 
 [node name="Camera Settings" type="Node3D" parent="." unique_id=1413544793]
 transform = Transform3D(1, 0, 0, 0, 0.9947028, 0.10279253, 0, -0.10279253, 0.9947028, 0, 0, 0)
@@ -73,3 +179,6 @@ grow_vertical = 0
 mouse_filter = 2
 max_value = 1.0
 show_percentage = false
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1718612988]
+libraries/ = SubResource("AnimationLibrary_3lxhc")

@@ -26,6 +26,14 @@ extends CharacterBody3D
 @export var grapple_pull_delay := 0.15
 @export_range(0.0, 1.0, 0.01) var max_grapple_slope := 0.4
 
+# Grappling an enemy does not pull you in — it reels them into a decision:
+# at/below the threshold you execute (cinematic closes in + kills); otherwise
+# pressing LMB just deals damage (not a kill).
+@export_range(0.0, 1.0, 0.01) var execution_threshold := 0.35
+@export var enemy_grapple_damage := 35.0
+@export var execution_duration := 0.6
+@export var execution_arrival_distance := 1.1
+
 @export var wall_attach_push := 12.0
 @export var wall_attach_hop := 10.0
 
@@ -50,9 +58,27 @@ var is_wall_attached := false
 var is_wall_sliding := false
 var wall_normal := Vector3.ZERO
 
+var is_enemy_grappled := false
+var grapple_enemy: TestDummy = null
+
+var is_executing := false
+var _execution_enemy: TestDummy = null
+var _execution_from := Vector3.ZERO
+var _execution_to := Vector3.ZERO
+var _execution_progress := 0.0
+
+var _grapple_line: MeshInstance3D = null
+
 @onready var camera_settings := $"Camera Settings"
 @onready var crosshair: TextureRect = $UI/Crosshair
 @onready var grapple_cd_bar: ProgressBar = $UI/GrappleCooldown
+@onready var _bow: Bow = $Bow
+@onready var _cutscene_anim: AnimationPlayer = get_node_or_null("AnimationPlayer")
+
+func _ready() -> void:
+	if _cutscene_anim != null:
+		_cutscene_anim.animation_finished.connect(_on_cutscene_animation_finished)
+
 
 func _physics_process(delta):
 	_grapple_cooldown_timer = maxf(0.0, _grapple_cooldown_timer - delta)
@@ -61,9 +87,37 @@ func _physics_process(delta):
 	grapple_cd_bar.visible = _grapple_cooldown_timer > 0.0
 	grapple_cd_bar.value = _grapple_cooldown_timer / grapple_cooldown
 
-	# Update crosshair — show green when a valid grapple target is in range
-	if not is_grappled:
-		crosshair.set_valid_target(is_grapplable(raycast_grapple()))
+	# Update crosshair — show green when a valid grapple target is in range,
+	# red when aiming at an enemy below the execution threshold, or during an
+	# enemy grapple hold show orange (damage) or red (executable).
+	if not is_grappled and not is_enemy_grappled and not is_executing:
+		var hit := raycast_grapple()
+		if not hit.is_empty():
+			var collider := hit.get("collider") as Node
+			if collider is TestDummy and (collider as TestDummy).is_alive():
+				var enemy := collider as TestDummy
+				var executable := not enemy.indestructible and enemy.health <= roundi(enemy.max_health * execution_threshold)
+				crosshair.set_enemy_state(executable)
+			elif is_grapplable(hit):
+				crosshair.set_valid_target(true)
+			else:
+				crosshair.reset()
+		else:
+			crosshair.set_valid_target(false)
+
+	# Execution cinematic — player glides toward the target, then deals
+	# lethal damage; all other input is locked out until it finishes.
+	if is_executing:
+		update_execution(delta)
+		move_and_slide()
+		return
+
+	# Enemy grapple hold — reel aimed at enemy; pressing LMB triggers
+	# the execution or a damage hit depending on the enemy's HP.
+	if is_enemy_grappled:
+		update_enemy_grapple(delta)
+		move_and_slide()
+		return
 
 	if is_grappled:
 		update_grapple(delta)
@@ -213,6 +267,18 @@ func try_start_grapple() -> bool:
 	if not is_grapplable(hit):
 		return false
 
+	# Enemy targets go into the hold stance instead of the normal pull.
+	var collider := hit.get("collider") as Node
+	if collider is TestDummy:
+		var dummy := collider as TestDummy
+		if dummy.is_alive():
+			return _start_enemy_grapple(dummy)
+		return false
+
+	return _start_surface_grapple(hit)
+
+
+func _start_surface_grapple(hit: Dictionary) -> bool:
 	is_grappled = true
 	grapple_target = hit.position
 	grapple_surface_normal = hit.normal
@@ -224,6 +290,219 @@ func try_start_grapple() -> bool:
 	camera_settings.set_grappling(true)
 	camera_settings.add_shake(0.12)
 	return true
+
+
+func _start_enemy_grapple(enemy: TestDummy) -> bool:
+	_grapple_cooldown_timer = grapple_cooldown
+	is_enemy_grappled = true
+	grapple_enemy = enemy
+	is_sliding = false
+	velocity = Vector3.ZERO
+	_bow.set_enemy_draw(true)
+	camera_settings.set_grappling(true)
+	camera_settings.add_shake(0.08)
+	_ensure_grapple_line()
+	return true
+
+
+func update_enemy_grapple(delta: float) -> void:
+	velocity = Vector3.ZERO
+
+	if grapple_enemy == null or grapple_enemy.is_queued_for_deletion() or not grapple_enemy.is_alive():
+		_release_enemy_grapple()
+		return
+
+	# Pressing jump breaks the hold entirely.
+	if Input.is_action_just_pressed("jump"):
+		_release_enemy_grapple()
+		camera_settings.add_shake(0.05)
+		return
+
+	# Left-click fires the execution cinematic or a quick damage hit.
+	if Input.is_action_just_pressed("shoot") and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+		_activate_enemy_grapple()
+		return
+
+	# Face the enemy so the hit or execution lines up with the crosshair.
+	var flat := grapple_enemy.global_position - global_position
+	flat.y = 0.0
+	if flat.length_squared() > 0.0001:
+		rotation.y = lerp_angle(
+			rotation.y,
+			atan2(-flat.x, -flat.z),
+			clampf(facing_turn_speed * delta, 0.0, 1.0),
+		)
+
+	# Tick the crosshair: red = executable, orange = damage only.
+	var executable := not grapple_enemy.indestructible and grapple_enemy.health <= roundi(grapple_enemy.max_health * execution_threshold)
+	crosshair.set_enemy_state(executable)
+
+	_update_grapple_line()
+
+
+func _activate_enemy_grapple() -> void:
+	var enemy := grapple_enemy
+	if enemy == null or not enemy.is_alive():
+		_release_enemy_grapple()
+		return
+
+	var executable := not enemy.indestructible and enemy.health <= roundi(enemy.max_health * execution_threshold)
+	if executable:
+		_begin_execution(enemy)
+		return
+
+	# Not executable — deal a quick hit and release the hold.
+	var dir := (enemy.global_position - global_position).normalized()
+	enemy.take_damage(roundi(enemy_grapple_damage), dir, enemy.global_position)
+	camera_settings.add_shake(0.15)
+	_release_enemy_grapple()
+
+
+func _begin_execution(enemy: TestDummy) -> void:
+	_execution_enemy = enemy
+	_execution_from = global_position
+	_execution_to = enemy.global_position - (enemy.global_position - global_position).normalized() * execution_arrival_distance
+	_execution_to.y += 0.3
+	_execution_progress = 0.0
+	is_enemy_grappled = false
+	grapple_enemy = null
+	is_executing = true
+	_bow.set_enemy_draw(false)
+	camera_settings.set_grappling(false)
+	camera_settings.set_cutscene(true)
+	crosshair.reset()
+	_clear_grapple_line()
+
+	# Play the cutscene. If an AnimationPlayer with an "execute" clip exists,
+	# its length drives the glide so the player lands when the camera does.
+	if _cutscene_anim != null and _cutscene_anim.has_animation("execute"):
+		var clip_len: float = _cutscene_anim.get_animation("execute").length
+		if clip_len > 0.001:
+			execution_duration = clip_len
+		_cutscene_anim.play("execute")
+
+
+func update_execution(delta: float) -> void:
+	if _execution_enemy == null or _execution_enemy.is_queued_for_deletion() or not _execution_enemy.is_alive():
+		_finish_execution()
+		return
+
+	_execution_progress = minf(_execution_progress + delta / execution_duration, 1.0)
+	var t := 1.0 - pow(1.0 - _execution_progress, 3.0)
+	global_position = _execution_from.lerp(_execution_to, t)
+	velocity = Vector3.ZERO
+
+	var flat := _execution_enemy.global_position - global_position
+	flat.y = 0.0
+	if flat.length_squared() > 0.0001:
+		rotation.y = lerp_angle(
+			rotation.y,
+			atan2(-flat.x, -flat.z),
+			clampf(20.0 * delta, 0.0, 1.0),
+		)
+
+	if _execution_progress >= 1.0:
+		_apply_execution_kill()
+
+
+func _apply_execution_kill() -> void:
+	var enemy := _execution_enemy
+	if enemy == null or enemy.is_queued_for_deletion():
+		_finish_execution()
+		return
+	_execution_enemy = null
+	var dir := (global_position - enemy.global_position).normalized()
+	enemy.take_damage(99999, dir, global_position)
+	camera_settings.add_shake(0.2)
+	_finish_execution()
+
+
+func _on_cutscene_animation_finished(anim_name: StringName) -> void:
+	if anim_name == &"execute" and is_executing:
+		_apply_execution_kill()
+
+
+func _finish_execution() -> void:
+	is_executing = false
+	_execution_enemy = null
+	velocity = Vector3.ZERO
+	camera_settings.set_grappling(false)
+	camera_settings.set_cutscene(false)
+	if _cutscene_anim != null and _cutscene_anim.is_playing():
+		_cutscene_anim.stop()
+	crosshair.reset()
+
+
+func _release_enemy_grapple() -> void:
+	is_enemy_grappled = false
+	grapple_enemy = null
+	_bow.set_enemy_draw(false)
+	camera_settings.set_grappling(false)
+	crosshair.reset()
+	_clear_grapple_line()
+
+
+func player_is_busy() -> bool:
+	return is_enemy_grappled or is_executing
+
+
+func get_grapple_enemy() -> Node3D:
+	if is_enemy_grappled:
+		return grapple_enemy
+	if is_executing:
+		return _execution_enemy
+	return null
+
+
+func _ensure_grapple_line() -> void:
+	if _grapple_line != null and is_instance_valid(_grapple_line):
+		return
+	var mid_mesh := CylinderMesh.new()
+	mid_mesh.top_radius = 0.012
+	mid_mesh.bottom_radius = 0.012
+	# TODO: Assign model asset (.glb) — replace placeholder grapple line with a rope / cord mesh.
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.8, 0.6, 0.2, 0.6)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	var line := MeshInstance3D.new()
+	line.name = "GrappleLine_Placeholder"
+	line.mesh = mid_mesh
+	line.material_override = mat
+	add_child(line)
+	_grapple_line = line
+
+
+func _update_grapple_line() -> void:
+	if _grapple_line == null or not is_instance_valid(_grapple_line) or grapple_enemy == null:
+		return
+	_set_line_between(global_position + Vector3(0, 1.1, 0), grapple_enemy.global_position + Vector3(0, 0.5, 0))
+
+
+func _set_line_between(from: Vector3, to: Vector3) -> void:
+	if _grapple_line == null or not is_instance_valid(_grapple_line):
+		return
+	var segment := to - from
+	var length := segment.length()
+	if length < 0.01:
+		_grapple_line.visible = false
+		return
+	_grapple_line.visible = true
+	var mesh := _grapple_line.mesh as CylinderMesh
+	if mesh != null:
+		mesh.height = length
+	var dir := segment / length
+	var up := Vector3.UP
+	if absf(dir.dot(Vector3.UP)) > 0.99:
+		up = Vector3.RIGHT
+	var z_axis := up.cross(dir).normalized()
+	var x_axis := dir.cross(z_axis).normalized()
+	_grapple_line.global_transform = Transform3D(Basis(x_axis, dir, z_axis), (from + to) * 0.5)
+
+
+func _clear_grapple_line() -> void:
+	if _grapple_line != null and is_instance_valid(_grapple_line):
+		_grapple_line.queue_free()
+		_grapple_line = null
 
 
 func update_grapple(delta) -> void:
