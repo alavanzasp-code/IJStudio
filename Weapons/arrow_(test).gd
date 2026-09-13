@@ -26,7 +26,11 @@ func _ready() -> void:
 	if col is CollisionShape3D:
 		col.rotation_degrees = Vector3(90, 0, 0)
 
-	build_arrow_mesh(self)
+	var model := Node3D.new()
+	model.name = "PlaceholderVisuals"
+	# TODO: Assign model asset (.glb) — replace placeholder primitives with instanced model.
+	add_child(model)
+	build_arrow_mesh(model)
 	_autofree()
 
 
@@ -38,39 +42,39 @@ static func build_arrow_mesh(parent: Node3D) -> void:
 	var fletch := StandardMaterial3D.new()
 	fletch.albedo_color = Color(0.82, 0.22, 0.16, 1.0)
 
-	var shaft := CylinderMesh.new()
-	shaft.top_radius = 0.012
-	shaft.bottom_radius = 0.012
-	shaft.height = 0.9
-	shaft.material = wood
+	var shaft_mesh := CylinderMesh.new()
+	shaft_mesh.top_radius = 0.012
+	shaft_mesh.bottom_radius = 0.012
+	shaft_mesh.height = 0.9
+	var shaft := MeshInstance3D.new()
+	shaft.name = "Shaft_Placeholder"
+	shaft.mesh = shaft_mesh
+	shaft.rotation_degrees = Vector3(90, 0, 0)
+	shaft.material_override = wood
+	parent.add_child(shaft)
 
-	var mi := MeshInstance3D.new()
-	mi.mesh = shaft
-	mi.rotation_degrees = Vector3(90, 0, 0)
-	parent.add_child(mi)
-
-	var head := CylinderMesh.new()
-	head.bottom_radius = 0.04
-	head.top_radius = 0.0
-	head.height = 0.16
-	head.material = wood
-
-	mi = MeshInstance3D.new()
-	mi.mesh = head
-	mi.position = Vector3(0, 0, -0.53)
-	mi.rotation_degrees = Vector3(-90, 0, 0)
-	parent.add_child(mi)
+	var head_mesh := CylinderMesh.new()
+	head_mesh.bottom_radius = 0.04
+	head_mesh.top_radius = 0.0
+	head_mesh.height = 0.16
+	var head := MeshInstance3D.new()
+	head.name = "Head_Placeholder"
+	head.mesh = head_mesh
+	head.position = Vector3(0, 0, -0.53)
+	head.rotation_degrees = Vector3(-90, 0, 0)
+	head.material_override = wood
+	parent.add_child(head)
 
 	for i in 3:
-		var fin := BoxMesh.new()
-		fin.size = Vector3(0.012, 0.09, 0.1)
-		fin.material = fletch
-
-		mi = MeshInstance3D.new()
-		mi.mesh = fin
-		mi.position = Vector3(0, 0, 0.42)
-		mi.rotation_degrees = Vector3(0, float(i) * 120.0, 0)
-		parent.add_child(mi)
+		var fin_mesh := BoxMesh.new()
+		fin_mesh.size = Vector3(0.012, 0.09, 0.1)
+		var fin := MeshInstance3D.new()
+		fin.name = "Fletching_Placeholder"
+		fin.mesh = fin_mesh
+		fin.position = Vector3(0, 0, 0.42)
+		fin.rotation_degrees = Vector3(0, float(i) * 120.0, 0)
+		fin.material_override = fletch
+		parent.add_child(fin)
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:

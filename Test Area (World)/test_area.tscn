@@ -16,8 +16,57 @@ sky = SubResource("Sky_0lty6")
 glow_enabled = true
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mltf8"]
+; TODO: Assign model asset (.glb) — replace placeholder material/texture with instanced .glb material.
 albedo_texture = ExtResource("1_p57bx")
 uv1_triplanar = true
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(30, 1.2, 30)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_east"]
+size = Vector3(0.5, 5.9, 30)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_west"]
+size = Vector3(0.5, 5.9, 30)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_north"]
+size = Vector3(30, 5.9, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_south"]
+size = Vector3(30, 5.9, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_decor1"]
+size = Vector3(9.378418, 10.22583, 0.42919922)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_decor2"]
+size = Vector3(2.479248, 3.2351074, 0.42919922)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_decor3"]
+size = Vector3(9.378418, 10.22583, 0.42919922)
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(30, 1.2, 30)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_east"]
+size = Vector3(0.5, 5.9, 30)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_west"]
+size = Vector3(0.5, 5.9, 30)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_north"]
+size = Vector3(30, 5.9, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_south"]
+size = Vector3(30, 5.9, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_decor1"]
+size = Vector3(9.378418, 10.22583, 0.42919922)
+
+[sub_resource type="BoxMesh" id="BoxMesh_decor2"]
+size = Vector3(2.479248, 3.2351074, 0.42919922)
+
+[sub_resource type="BoxMesh" id="BoxMesh_decor3"]
+size = Vector3(9.378418, 10.22583, 0.42919922)
 
 [node name="Test Area" type="Node3D" unique_id=1012487593]
 
@@ -28,34 +77,86 @@ environment = SubResource("Environment_xnvkt")
 transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
 shadow_enabled = true
 
-[node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=619963681]
-use_collision = true
-
-[node name="CSGBox3D" type="CSGBox3D" parent="CSGCombiner3D" unique_id=1464855038]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9012084, 0)
-size = Vector3(30, 5.902417, 30)
-material = SubResource("StandardMaterial3D_mltf8")
-
-[node name="CSGBox3D2" type="CSGBox3D" parent="CSGCombiner3D" unique_id=698490447]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.4665985, 0)
-operation = 2
-size = Vector3(29, 6.633197, 29)
-material = SubResource("StandardMaterial3D_mltf8")
-
 [node name="Player (Test)" parent="." unique_id=1302519365 instance=ExtResource("2_0lty6")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3553977, 0)
 
-[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=611818554]
+[node name="Arena" type="StaticBody3D" parent="."]
+
+[node name="FloorCollision" type="CollisionShape3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.45, 0)
+shape = SubResource("BoxShape3D_floor")
+
+[node name="WallEastCollision" type="CollisionShape3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 2.9, 0)
+shape = SubResource("BoxShape3D_wall_east")
+
+[node name="WallWestCollision" type="CollisionShape3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 2.9, 0)
+shape = SubResource("BoxShape3D_wall_west")
+
+[node name="WallNorthCollision" type="CollisionShape3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, -14.75)
+shape = SubResource("BoxShape3D_wall_north")
+
+[node name="WallSouthCollision" type="CollisionShape3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, 14.75)
+shape = SubResource("BoxShape3D_wall_south")
+
+; TODO: Assign model asset (.glb) — replace placeholder meshes with instanced arena floor/walls model.
+[node name="FloorMesh_Placeholder" type="MeshInstance3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.45, 0)
+mesh = SubResource("BoxMesh_floor")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="WallEastMesh_Placeholder" type="MeshInstance3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 2.9, 0)
+mesh = SubResource("BoxMesh_wall_east")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="WallWestMesh_Placeholder" type="MeshInstance3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 2.9, 0)
+mesh = SubResource("BoxMesh_wall_west")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="WallNorthMesh_Placeholder" type="MeshInstance3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, -14.75)
+mesh = SubResource("BoxMesh_wall_north")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="WallSouthMesh_Placeholder" type="MeshInstance3D" parent="Arena"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, 14.75)
+mesh = SubResource("BoxMesh_wall_south")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="Decor Wall 1" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.189209, 4.6364613, 7.2854004)
-use_collision = true
-size = Vector3(9.378418, 10.22583, 0.42919922)
 
-[node name="CSGBox3D5" type="CSGBox3D" parent="." unique_id=1948707755]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Decor Wall 1"]
+shape = SubResource("BoxShape3D_decor1")
+
+; TODO: Assign model asset (.glb) — replace placeholder mesh with instanced wall model.
+[node name="WallMesh_Placeholder" type="MeshInstance3D" parent="Decor Wall 1"]
+mesh = SubResource("BoxMesh_decor1")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="Decor Wall 2" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.887547, 19.43376, 7.2854004)
-use_collision = true
-size = Vector3(2.479248, 3.2351074, 0.42919922)
 
-[node name="CSGBox3D2" type="CSGBox3D" parent="." unique_id=597349857]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Decor Wall 2"]
+shape = SubResource("BoxShape3D_decor2")
+
+; TODO: Assign model asset (.glb) — replace placeholder mesh with instanced wall model.
+[node name="WallMesh_Placeholder" type="MeshInstance3D" parent="Decor Wall 2"]
+mesh = SubResource("BoxMesh_decor2")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="Decor Wall 3" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.189209, 18.897953, -6.1196094)
-use_collision = true
-size = Vector3(9.378418, 10.22583, 0.42919922)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Decor Wall 3"]
+shape = SubResource("BoxShape3D_decor3")
+
+; TODO: Assign model asset (.glb) — replace placeholder mesh with instanced wall model.
+[node name="WallMesh_Placeholder" type="MeshInstance3D" parent="Decor Wall 3"]
+mesh = SubResource("BoxMesh_decor3")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
