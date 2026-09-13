@@ -4,9 +4,11 @@ extends Node3D
 const ARROW_SCENE: PackedScene = preload("res://Weapons/arrow_(test).tscn")
 
 @export var draw_time := 0.55
-@export var arrow_min_speed := 22.0
+@export var arrow_min_speed := 15.0
 @export var arrow_max_speed := 55.0
-@export_range(0.0, 1.0, 0.01) var min_charge := 0.4
+@export_range(0.0, 1.0, 0.01) var min_charge := 0.15
+# >1 bends the charge curve so quick taps stay weak and full draws pay the most.
+@export_range(1.0, 3.0, 0.05) var charge_power := 1.35
 @export var aim_turn_speed := 15.0
 @export var aim_rotate_speed := 20.0
 
@@ -81,8 +83,11 @@ func fire() -> void:
 	if _player != null:
 		arrow.add_collision_exception_with(_player)
 
+	# Nonlinear ramp: a tap only reaches ~half the max speed, so drawn shots
+	# gain real travel power — but the tap still flies a usable distance.
 	var charge := maxf(_draw, min_charge)
-	arrow.linear_velocity = dir * lerpf(arrow_min_speed, arrow_max_speed, charge)
+	var effective_charge := pow(charge, charge_power)
+	arrow.linear_velocity = dir * lerpf(arrow_min_speed, arrow_max_speed, effective_charge)
 
 	if _camera_settings != null and _camera_settings.has_method("add_shake"):
 		_camera_settings.add_shake(0.05 + charge * 0.03)
