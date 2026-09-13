@@ -19,23 +19,21 @@ extends CharacterBody3D
 @export var slide_duration := 2.0
 
 @export var grapple_range := 30.0
-@export var grapple_accel := 30.0
-@export var grapple_pull_speed := 16.0
+@export var grapple_pull_speed := 30.0
 @export var grapple_fling_boost := 1.3
 @export var grapple_cancel_distance := 1.0
-@export var grapple_cooldown := 4
+@export var grapple_cooldown := 1.0
+@export var grapple_pull_delay := 0.15
 @export_range(0.0, 1.0, 0.01) var max_grapple_slope := 0.4
 
-@export var wall_attach_push := 6.0
-@export var wall_attach_hop := 3.0
+@export var wall_attach_push := 12.0
+@export var wall_attach_hop := 10.0
 
 @export var wall_slide_speed := 3.0
 @export var wall_slide_grab := 30.0
 @export var wall_slide_friction := 8.0
 @export var wall_slide_stick := 10.0
 @export var wall_slide_grip := 4.0
-@export var wall_jump_velocity := 5.0
-@export var wall_jump_push := 8.0
 
 var is_sliding := false
 var slide_timer := 5
@@ -45,6 +43,7 @@ var is_grappled := false
 var grapple_target := Vector3.ZERO
 var grapple_surface_normal := Vector3.UP
 var _grapple_cooldown_timer := 0.0
+var _grapple_pull_timer := 0.0
 
 var is_wall_attached := false
 
@@ -217,6 +216,8 @@ func try_start_grapple() -> bool:
 	is_grappled = true
 	grapple_target = hit.position
 	grapple_surface_normal = hit.normal
+	_grapple_pull_timer = grapple_pull_delay
+	_grapple_cooldown_timer = grapple_cooldown
 	is_sliding = false
 	velocity.x *= 0.2
 	velocity.z *= 0.2
@@ -225,30 +226,32 @@ func try_start_grapple() -> bool:
 	return true
 
 
-func update_grapple(delta):
-	var pull_point := global_position + Vector3(0, 0.6, 0)
-
-	# Jumping mid-grapple flings you off with the carried momentum
+func update_grapple(delta) -> void:
+	# Jumping mid-grapple cancels the pull and flings you off with momentum
 	if Input.is_action_just_pressed("jump"):
 		end_grapple()
 		velocity.x *= grapple_fling_boost
 		velocity.z *= grapple_fling_boost
 		return
 
-	# Fully reached the wall — attach and cling instead of bouncing off
+	var pull_point := global_position + Vector3(0, 0.6, 0)
+
+	# Short wind-up simulating the grapple being shot / initial animation
+	if _grapple_pull_timer > 0.0:
+		_grapple_pull_timer -= delta
+		return
+
+	# Reached the wall — attach and cling before we can pass through it
 	if pull_point.distance_to(grapple_target) <= grapple_cancel_distance:
 		attach_to_wall()
 		return
 
-	# Pull the player toward the anchor point
+	# Flight: slam the velocity straight at the anchor every frame — a fast,
+	# readable pull with no acceleration buildup, overshoot, or swinging.
 	var pull_dir := (grapple_target - pull_point).normalized()
-	velocity += pull_dir * grapple_accel * delta
+	velocity = pull_dir * grapple_pull_speed
 
-	# Cap the pull so a normal catch never turns into a fling
-	if velocity.length() > grapple_pull_speed:
-		velocity *= grapple_pull_speed / velocity.length()
-
-	# Face toward the anchor while pulling
+	# Face toward the anchor while flying so the pull reads as an animation
 	var flat_pull := Vector3(pull_dir.x, 0, pull_dir.z)
 	if flat_pull.length_squared() > 0.001:
 		rotation.y = lerp_angle(
@@ -257,17 +260,13 @@ func update_grapple(delta):
 			clampf(facing_turn_speed * delta, 0.0, 1.0),
 		)
 
-	# Approaching shake — stronger when fast, fades as we get closer
-	var dist := pull_point.distance_to(grapple_target)
-	var speed := velocity.length()
-	camera_settings.add_shake(speed * 0.002 * clampf(dist / 15.0, 0.0, 1.0))
+	camera_settings.add_shake(0.01)
 
 
 func attach_to_wall() -> void:
 	is_grappled = false
 	is_wall_attached = true
 	velocity = Vector3.ZERO
-	_grapple_cooldown_timer = grapple_cooldown
 	camera_settings.set_grappling(false)
 	camera_settings.add_shake(0.08)
 
@@ -282,7 +281,6 @@ func update_wall_attach(_delta: float) -> bool:
 		is_wall_attached = false
 		velocity = grapple_surface_normal * wall_attach_push
 		velocity.y = wall_attach_hop
-		_grapple_cooldown_timer = 0.2
 		camera_settings.set_grappling(false)
 		camera_settings.add_shake(0.1)
 		return true
@@ -292,7 +290,6 @@ func update_wall_attach(_delta: float) -> bool:
 
 func end_grapple(damp_velocity := false) -> void:
 	is_grappled = false
-	_grapple_cooldown_timer = grapple_cooldown
 	camera_settings.set_grappling(false)
 
 	if damp_velocity:
@@ -332,13 +329,6 @@ func handle_wall_slide(delta) -> void:
 	velocity += normal * wall_slide_grip * delta
 	velocity.x = move_toward(velocity.x, 0, wall_slide_stick * delta)
 	velocity.z = move_toward(velocity.z, 0, wall_slide_stick * delta)
-
-	# Wall jump away from the surface
-	if Input.is_action_just_pressed("jump"):
-		velocity.y = wall_jump_velocity
-		velocity += normal * wall_jump_push
-		is_wall_sliding = false
-		wall_normal = Vector3.ZERO
 
 
 func _detect_wall_normal() -> Vector3:

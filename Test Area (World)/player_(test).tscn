@@ -25,13 +25,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 0.85, -0.6)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.118676186, 0)
 shape = SubResource("CapsuleShape3D_mltf8")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=394142981]
+[node name="PlayerBody_Placeholder" type="MeshInstance3D" parent="." unique_id=394142981]
 mesh = SubResource("CapsuleMesh_mltf8")
+; TODO: Assign model asset (.glb) — replace placeholder capsule with instanced player model.
 
 [node name="FacingMarker" type="MeshInstance3D" parent="." unique_id=1368285233]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, -0.23460692)
 mesh = SubResource("BoxMesh_facing")
 surface_material_override/0 = SubResource("StandardMaterial3D_facing")
+; TODO: Assign model asset (.glb) — replace placeholder facing indicator.
 
 [node name="Camera Settings" type="Node3D" parent="." unique_id=1413544793]
 transform = Transform3D(1, 0, 0, 0, 0.9947028, 0.10279253, 0, -0.10279253, 0.9947028, 0, 0, 0)

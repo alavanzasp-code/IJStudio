@@ -9,9 +9,14 @@
 ---
 
 ## 2. Hard Boundaries & Prohibitions (STRICT)
-- 🚫 **NO Procedural Meshes:** NEVER generate procedural geometry, `ImmediateMesh`, `SurfaceTool`, `ArrayMesh`, or `CSGPrimitive3D` nodes (`CSGBox3D`, `CSGCylinder3D`, etc.).
-- 🚫 **Reference Existing Assets Only:** Visual representations must strictly reference existing `.glb`, `.gltf`, or `.tscn` files located in `res://assets/` or `res://scenes/`.
-- 🚫 **Missing Assets:** If an asset (weapon, projectile, character) does not exist, DO NOT draw a substitute via code. Instantiate an empty `Marker3D` or `Node3D` placeholder, label it clearly (e.g., `WeaponSlot`, `SpawnPoint`), and leave a `# TODO: Assign model asset` comment.
+- 🚫 **NO Final-Game Procedural Meshes:** NEVER build final game geometry with `ImmediateMesh`, `SurfaceTool`, or `ArrayMesh`. These are forbidden at all times.
+- ✅ **DEV/Test Placeholder Primitives (ALLOWED):** Until real `.glb`/`.gltf` assets exist in `res://assets/`, primitive meshes (`BoxMesh`, `CylinderMesh`, `CapsuleMesh`, etc.) and CSG nodes are ALLOWED **only** as clearly-labeled development placeholders so the game stays visible and interactable. Mandatory rules:
+  - Placeholders use a `_Placeholder` suffix in the node/mesh name, or are grouped under a parent named `PlaceholderVisuals`.
+  - Each placeholder has a `# TODO: Assign model asset (path)` comment stating the intended asset.
+  - Static geometry: use `StaticBody3D` + `MeshInstance3D` (primitive mesh) + `CollisionShape3D` matching. Prefer this over CSG.
+  - CSG nodes are allowed only for quick level-blockout; never in final content.
+  - When the real asset is added, the placeholder is replaced by the instanced `.glb`/`.gltf`/`.tscn` — placeholders must never ship as final content.
+- 🚫 **Never Mix:** A placeholder may exist only where NO real asset is available. If a real `.glb`/`.gltf`/`.tscn` exists for that purpose, it MUST be used instead.
 - 🚫 **No Godot 3 Syntax Drift:** Always use `CharacterBody3D.velocity`, `move_and_slide()` with no arguments, `@export` instead of `export`, and `@onready` instead of `onready`.
 
 ---
@@ -52,10 +57,23 @@ func shoot() -> void:
 	arrow.global_transform = muzzle_marker.global_transform
 	get_tree().current_scene.add_child(arrow)
 
-# ❌ WRONG: Generates procedural geometry via code
+# ✅ CORRECT: Labeled placeholder primitive — allowed until the real .glb exists
+func build_placeholder_visuals() -> void:
+	var visuals := Node3D.new()
+	visuals.name = "PlaceholderVisuals"
+	# TODO: Assign model asset (res://assets/weapons/arrow.glb)
+	var shaft := MeshInstance3D.new()
+	shaft.name = "Shaft_Placeholder"
+	var cylinder := CylinderMesh.new()
+	cylinder.height = 0.9
+	shaft.mesh = cylinder
+	visuals.add_child(shaft)
+	add_child(visuals)
+
+# ❌ WRONG: Anonymous, unlabeled primitive geometry with no asset plan
 func shoot() -> void:
 	var mesh_instance = MeshInstance3D.new()
-	var cylinder = CylinderMesh.new() # FORBIDDEN
+	var cylinder = CylinderMesh.new()
 	mesh_instance.mesh = cylinder
 	add_child(mesh_instance)
 
@@ -64,5 +82,5 @@ func shoot() -> void:
 ## 5. Verification & Definition of Done
 Before completing any task:
 - Ensure all node references and scene paths point to valid paths inside res://.
-- Confirm no procedural primitives or CSG nodes were introduced.
+- Confirm no `ImmediateMesh`, `SurfaceTool`, or `ArrayMesh` was used, and that any primitive/CSG placeholders follow the Section-2 labeling + TODO rules.
 - Validate that all signals, function signatures, and engine calls follow Godot 4.x syntax.
