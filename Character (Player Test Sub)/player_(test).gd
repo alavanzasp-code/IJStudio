@@ -26,16 +26,14 @@ extends CharacterBody3D
 @export var grapple_pull_delay := 0.15
 @export_range(0.0, 1.0, 0.01) var max_grapple_slope := 0.4
 
-@export var wall_attach_push := 6.0
-@export var wall_attach_hop := 3.0
+@export var wall_attach_push := 12.0
+@export var wall_attach_hop := 10.0
 
 @export var wall_slide_speed := 3.0
 @export var wall_slide_grab := 30.0
 @export var wall_slide_friction := 8.0
 @export var wall_slide_stick := 10.0
 @export var wall_slide_grip := 4.0
-@export var wall_jump_velocity := 5.0
-@export var wall_jump_push := 8.0
 
 var is_sliding := false
 var slide_timer := 5
@@ -331,13 +329,6 @@ func handle_wall_slide(delta) -> void:
 	velocity += normal * wall_slide_grip * delta
 	velocity.x = move_toward(velocity.x, 0, wall_slide_stick * delta)
 	velocity.z = move_toward(velocity.z, 0, wall_slide_stick * delta)
-
-	# Wall jump away from the surface
-	if Input.is_action_just_pressed("jump"):
-		velocity.y = wall_jump_velocity
-		velocity += normal * wall_jump_push
-		is_wall_sliding = false
-		wall_normal = Vector3.ZERO
 
 
 func _detect_wall_normal() -> Vector3:
