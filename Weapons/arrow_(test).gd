@@ -3,8 +3,16 @@ extends RigidBody3D
 
 @export var lifetime := 20.0
 @export var arrow_gravity := 0.4
+@export var damage_scale := 1.0
+@export var stuck_lifetime := 8.0
 
 var _frozen := false
+var _first_frame := true
+var _prev_position := Vector3.ZERO
+var _sweep_shape: CapsuleShape3D
+var _source: Node3D = null
+var _impact_basis := Basis.IDENTITY
+var _impact_pose_set := false
 
 
 func _ready() -> void:
@@ -32,6 +40,10 @@ func _ready() -> void:
 	add_child(model)
 	build_arrow_mesh(model)
 	_autofree()
+
+
+func set_source(body: Node3D) -> void:
+	_source = body
 
 
 static func build_arrow_mesh(parent: Node3D) -> void:
@@ -79,7 +91,12 @@ static func build_arrow_mesh(parent: Node3D) -> void:
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	if _frozen:
+		if _impact_pose_set and not state.transform.basis.is_equal_approx(_impact_basis):
+			var tf := state.transform
+			tf.basis = _impact_basis
+			state.transform = tf
 		return
+
 	var vel := state.linear_velocity
 	if vel.length_squared() < 4.0:
 		return
@@ -92,18 +109,109 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	state.transform = t
 
 
-func _on_body_entered(body: Node) -> void:
+func _physics_process(_delta: float) -> void:
 	if _frozen:
+		if _impact_pose_set and not global_transform.basis.is_equal_approx(_impact_basis):
+			var tf := global_transform
+			tf.basis = _impact_basis
+			global_transform = tf
 		return
-	if body is Arrow:
+	var current := global_position
+	if _first_frame:
+		# Defer seeding until the first physics process: _ready runs during
+		# add_child, before the shooter applies the spawn transform, so the
+		# previous position would wrongly be the scene origin. Sweeping a long
+		# phantom segment from the origin to the spawn point would hit the
+		# world (floor/walls) and freeze arrows mid-air beside the player.
+		_first_frame = false
+		_prev_position = current
+		return
+	if _prev_position.distance_squared_to(current) > 0.0004:
+		# Sweep the full segment travelled since the last frame so a fast-moving
+		# target (flying/moving dummies) can never slip through a between-frame
+		# gap that discrete/CCD contact would miss.
+		_sweep_hit(_prev_position, current)
+	_prev_position = current
+
+
+func _sweep_hit(from: Vector3, to: Vector3) -> void:
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return
+	var segment := to - from
+	if segment.length() < 0.01:
+		return
+	if _sweep_shape == null:
+		_sweep_shape = CapsuleShape3D.new()
+		_sweep_shape.radius = 0.05
+	var dir := segment.normalized()
+	_sweep_shape.height = segment.length() + 0.2
+	var up := Vector3.UP
+	if absf(dir.dot(Vector3.UP)) > 0.99:
+		up = Vector3.RIGHT
+	var z_axis := up.cross(dir).normalized()
+	var x_axis := dir.cross(z_axis).normalized()
+
+	var params := PhysicsShapeQueryParameters3D.new()
+	params.shape = _sweep_shape
+	params.transform = Transform3D(Basis(x_axis, dir, z_axis), (from + to) * 0.5)
+	params.collision_mask = 1
+	var exclude := [get_rid()]
+	if _source is PhysicsBody3D:
+		exclude.append((_source as PhysicsBody3D).get_rid())
+	params.exclude = exclude
+
+	var results := space.intersect_shape(params, 1)
+	if results.is_empty():
+		return
+	_handle_impact(results[0].get("collider") as Node)
+
+
+func _on_body_entered(body: Node) -> void:
+	_handle_impact(body)
+
+
+func _handle_impact(body: Node) -> void:
+	if _frozen or body == null:
+		return
+	if body is Arrow or body == _source:
 		return
 	_frozen = true
+	_impact_basis = global_transform.basis
+	_impact_pose_set = true
+	physics_interpolation_mode = Node3D.PHYSICS_INTERPOLATION_MODE_OFF
+
+	var impact_dir := -global_transform.basis.z
+	if linear_velocity.length_squared() > 1.0:
+		impact_dir = linear_velocity.normalized()
+	var impact_speed := linear_velocity.length()
+
+	# On stick: stop acting as a solid obstacle, embed into the victim so it
+	# rides along (moving dummies are no longer blocked), and despawn after a
+	# short stuck lifetime instead of lingering forever.
 	freeze = true
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
+	collision_layer = 0
+	collision_mask = 0
+	_deferred_attach.call_deferred(body)
+	_autofree()
+
+	if body.has_method("take_damage"):
+		body.take_damage(roundi(impact_speed * damage_scale), impact_dir, global_position)
+
+
+func _deferred_attach(body: Node) -> void:
+	var target := body as Node3D
+	if target == null or is_queued_for_deletion() or not is_inside_tree():
+		return
+	reparent(target)
 
 
 func _autofree() -> void:
-	await get_tree().create_timer(lifetime).timeout
-	if not _frozen:
+	var despawn_time := lifetime
+	if _frozen:
+		despawn_time = stuck_lifetime
+	await get_tree().create_timer(despawn_time).timeout
+	if is_inside_tree() and not is_queued_for_deletion():
 		queue_free()
