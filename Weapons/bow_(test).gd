@@ -168,15 +168,46 @@ func _reset_bow_local() -> void:
 
 func _update_draw_visual(delta: float) -> void:
 	var k := clampf(16.0 * delta, 0.0, 1.0)
-	_string.position.z = lerpf(_string.position.z, -0.13 + _draw * 0.13, k)
+	# _string only exists on the primitive fallback; the real bow model carries
+	# its own string, so there is nothing to animate there.
+	if _string != null:
+		_string.position.z = lerpf(_string.position.z, -0.13 + _draw * 0.13, k)
 	_nock.position.z = lerpf(_nock.position.z, -0.06 + _draw * 0.16, k)
 
 
 func _build_bow() -> void:
-	# TODO: Assign model asset (.glb) — replace placeholder primitives with instanced bow model.
 	var visuals := Node3D.new()
 	visuals.name = "PlaceholderVisuals"
 	add_child(visuals)
+
+	# The nock is always built: it is driven by _draw, not by the asset, so the
+	# loaded-arrow preview must exist whether or not the bow model has landed.
+	_nock = Node3D.new()
+	_nock.name = "NockPoint"
+	_nock.position = Vector3(0, 0, -0.06)
+	add_child(_nock)
+	# Show a loaded arrow nock so the bow reads at a glance.
+	Arrow.build_visual(_nock)
+
+	var model := ModelLibrary.instantiate_model("bow")
+	if model != null:
+		# The model brings its own string; adding the placeholder one on top
+		# produced a white pole standing next to the bow.
+		visuals.add_child(model)
+		return
+
+	# TODO: Assign model asset — drop a .glb at the path in ModelLibrary.SPECS
+	# ("bow") and these primitives are removed automatically.
+	var string_mat := StandardMaterial3D.new()
+	string_mat.albedo_color = Color(0.9, 0.9, 0.88, 1.0)
+	var string_mesh := BoxMesh.new()
+	string_mesh.size = Vector3(0.012, 1.22, 0.03)
+	_string = MeshInstance3D.new()
+	_string.name = "String_Placeholder"
+	_string.mesh = string_mesh
+	_string.position = Vector3(0, 0, -0.13)
+	_string.material_override = string_mat
+	visuals.add_child(_string)
 
 	var wood := StandardMaterial3D.new()
 	wood.albedo_color = Color(0.42, 0.24, 0.1, 1.0)
@@ -185,30 +216,13 @@ func _build_bow() -> void:
 	var dark := StandardMaterial3D.new()
 	dark.albedo_color = Color(0.16, 0.09, 0.05, 1.0)
 
-	var string_mat := StandardMaterial3D.new()
-	string_mat.albedo_color = Color(0.9, 0.9, 0.88, 1.0)
-
-	_add_box(visuals, Vector3(0.06, 0.3, 0.05), Vector3(0, 0, 0.03), Vector3.ZERO, wood, "Grip_Placeholder")
-	_add_box(visuals, Vector3(0.05, 0.62, 0.045), Vector3(0, 0.3, 0.06), Vector3(20, 0, 0), wood, "Limb_Placeholder")
-	_add_box(visuals, Vector3(0.05, 0.62, 0.045), Vector3(0, -0.3, 0.06), Vector3(-20, 0, 0), wood, "Limb_Placeholder")
+	# Limbs tilt about X so the bow's plane is the sagittal YZ plane: belly
+	# forward, string toward the archer.
+	_add_box(visuals, Vector3(0.05, 0.3, 0.06), Vector3(0, 0, 0.03), Vector3.ZERO, wood, "Grip_Placeholder")
+	_add_box(visuals, Vector3(0.045, 0.62, 0.05), Vector3(0, 0.3, 0.06), Vector3(20, 0, 0), wood, "Limb_Placeholder")
+	_add_box(visuals, Vector3(0.045, 0.62, 0.05), Vector3(0, -0.3, 0.06), Vector3(-20, 0, 0), wood, "Limb_Placeholder")
 	_add_box(visuals, Vector3(0.06, 0.08, 0.06), Vector3(0, 0.58, 0.1), Vector3(20, 0, 0), dark, "Tip_Placeholder")
 	_add_box(visuals, Vector3(0.06, 0.08, 0.06), Vector3(0, -0.58, 0.1), Vector3(-20, 0, 0), dark, "Tip_Placeholder")
-
-	var string_mesh := BoxMesh.new()
-	string_mesh.size = Vector3(0.03, 1.22, 0.012)
-	_string = MeshInstance3D.new()
-	_string.name = "String_Placeholder"
-	_string.mesh = string_mesh
-	_string.position = Vector3(0, 0, -0.13)
-	_string.material_override = string_mat
-	add_child(_string)
-
-	_nock = Node3D.new()
-	_nock.name = "NockPoint"
-	_nock.position = Vector3(0, 0, -0.06)
-	add_child(_nock)
-	# Show a loaded arrow nock placeholder so the bow reads at a glance.
-	Arrow.build_arrow_mesh(_nock)
 
 
 func _add_box(

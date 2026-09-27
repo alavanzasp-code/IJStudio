@@ -1,0 +1,11 @@
+Model Information:
+* title:	The Practice Dummy
+* source:	https://sketchfab.com/3d-models/the-practice-dummy-e9f8055b88d043c38475c8c490587704
+* author:	𝕲𝖔𝖑𝖉𝖊𝖓 𝕱𝖔𝖗𝖌𝖊𝖗 (https://sketchfab.com/Golden_Forger)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "The Practice Dummy" (https://sketchfab.com/3d-models/the-practice-dummy-e9f8055b88d043c38475c8c490587704) by 𝕲𝖔𝖑𝖉𝖊𝖓 𝕱𝖔𝖗𝖌𝖊𝖗 (https://sketchfab.com/Golden_Forger) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

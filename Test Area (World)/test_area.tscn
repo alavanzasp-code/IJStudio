@@ -3,6 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://bmsmssijff3r7" path="res://Assets/PNG/Dark/texture_05.png" id="1_p57bx"]
 [ext_resource type="PackedScene" uid="uid://dgeyhgsoq3k8t" path="res://Test Area (World)/player_(test).tscn" id="2_0lty6"]
 [ext_resource type="PackedScene" path="res://Dummies/dummy_(test).tscn" id="3_dummy"]
+[ext_resource type="Script" path="res://Assets/ArenaVisualUpgrade.gd" id="4_upgrade"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_p57bx"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -20,16 +21,16 @@ glow_enabled = true
 size = Vector3(30, 1.2, 30)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_east"]
-size = Vector3(0.5, 5.9, 30)
+size = Vector3(0.5, 3.8, 30)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_west"]
-size = Vector3(0.5, 5.9, 30)
+size = Vector3(0.5, 3.8, 30)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_north"]
-size = Vector3(30, 5.9, 0.5)
+size = Vector3(30, 3.8, 0.5)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_south"]
-size = Vector3(30, 5.9, 0.5)
+size = Vector3(30, 3.8, 0.5)
 
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
 size = Vector3(30, 1.2, 30)
@@ -39,36 +40,25 @@ albedo_texture = ExtResource("1_p57bx")
 uv1_triplanar = true
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall_east"]
-size = Vector3(0.5, 5.9, 30)
+size = Vector3(0.5, 3.8, 30)
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall_west"]
-size = Vector3(0.5, 5.9, 30)
+size = Vector3(0.5, 3.8, 30)
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall_north"]
-size = Vector3(30, 5.9, 0.5)
+size = Vector3(30, 3.8, 0.5)
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall_south"]
-size = Vector3(30, 5.9, 0.5)
+size = Vector3(30, 3.8, 0.5)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_decor1"]
-size = Vector3(9.378418, 10.22583, 0.42919922)
 
-[sub_resource type="BoxMesh" id="BoxMesh_decor1"]
-size = Vector3(9.378418, 10.22583, 0.42919922)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_decor2"]
-size = Vector3(2.479248, 3.2351074, 0.42919922)
 
-[sub_resource type="BoxMesh" id="BoxMesh_decor2"]
-size = Vector3(2.479248, 3.2351074, 0.42919922)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_decor3"]
-size = Vector3(9.378418, 10.22583, 0.42919922)
 
-[sub_resource type="BoxMesh" id="BoxMesh_decor3"]
-size = Vector3(9.378418, 10.22583, 0.42919922)
 
 [node name="Test Area" type="Node3D" unique_id=1012487593]
+script = ExtResource("4_upgrade")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1307493249]
 environment = SubResource("Environment_xnvkt")
@@ -112,19 +102,19 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.45, 0)
 shape = SubResource("BoxShape3D_floor")
 
 [node name="WallEastCollision" type="CollisionShape3D" parent="Arena" unique_id=774350399]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 2.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 2.05, 0)
 shape = SubResource("BoxShape3D_wall_east")
 
 [node name="WallWestCollision" type="CollisionShape3D" parent="Arena" unique_id=748395009]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 2.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 2.05, 0)
 shape = SubResource("BoxShape3D_wall_west")
 
 [node name="WallNorthCollision" type="CollisionShape3D" parent="Arena" unique_id=1017424523]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, -14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, -14.75)
 shape = SubResource("BoxShape3D_wall_north")
 
 [node name="WallSouthCollision" type="CollisionShape3D" parent="Arena" unique_id=191518275]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, 14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 14.75)
 shape = SubResource("BoxShape3D_wall_south")
 
 [node name="FloorMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=1724282437]
@@ -133,51 +123,21 @@ mesh = SubResource("BoxMesh_floor")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallEastMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=279664668]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 2.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 2.05, 0)
 mesh = SubResource("BoxMesh_wall_east")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallWestMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=902476942]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 2.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 2.05, 0)
 mesh = SubResource("BoxMesh_wall_west")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallNorthMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=1512809238]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, -14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, -14.75)
 mesh = SubResource("BoxMesh_wall_north")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallSouthMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=1987054882]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, 14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 14.75)
 mesh = SubResource("BoxMesh_wall_south")
-surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
-
-[node name="Decor Wall 1" type="StaticBody3D" parent="." unique_id=1760980542]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.189209, 4.6364613, 7.2854004)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Decor Wall 1" unique_id=427210261]
-shape = SubResource("BoxShape3D_decor1")
-
-[node name="WallMesh_Placeholder" type="MeshInstance3D" parent="Decor Wall 1" unique_id=1623948520]
-mesh = SubResource("BoxMesh_decor1")
-surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
-
-[node name="Decor Wall 2" type="StaticBody3D" parent="." unique_id=1413033654]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.887547, 19.43376, 7.2854004)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Decor Wall 2" unique_id=674860405]
-shape = SubResource("BoxShape3D_decor2")
-
-[node name="WallMesh_Placeholder" type="MeshInstance3D" parent="Decor Wall 2" unique_id=1002362521]
-mesh = SubResource("BoxMesh_decor2")
-surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
-
-[node name="Decor Wall 3" type="StaticBody3D" parent="." unique_id=306038076]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.189209, 18.897953, -6.1196094)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Decor Wall 3" unique_id=1441724604]
-shape = SubResource("BoxShape3D_decor3")
-
-[node name="WallMesh_Placeholder" type="MeshInstance3D" parent="Decor Wall 3" unique_id=577605375]
-mesh = SubResource("BoxMesh_decor3")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")

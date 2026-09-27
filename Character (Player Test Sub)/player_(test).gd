@@ -67,7 +67,12 @@ var _execution_from := Vector3.ZERO
 var _execution_to := Vector3.ZERO
 var _execution_progress := 0.0
 
-var _grapple_line: MeshInstance3D = null
+var _grapple_line: Node3D = null
+# Axis the rope asset is stretched along, and its authored length on that axis.
+# Runtime length is applied as a node scale so this works for a real .glb as
+# well as the primitive fallback, without touching any mesh resource.
+var _grapple_line_axis := Vector3.UP
+var _grapple_line_base := 1.0
 
 @onready var camera_settings := $"Camera Settings"
 @onready var crosshair: TextureRect = $UI/Crosshair
@@ -78,6 +83,21 @@ var _grapple_line: MeshInstance3D = null
 func _ready() -> void:
 	if _cutscene_anim != null:
 		_cutscene_anim.animation_finished.connect(_on_cutscene_animation_finished)
+	_upgrade_body_visual()
+
+
+## Swaps the capsule blockout in the scene for the real character model.
+## No-op until the asset is downloaded — the capsule simply stays.
+func _upgrade_body_visual() -> void:
+	var blockout := get_node_or_null("PlayerBody_Placeholder") as MeshInstance3D
+	if blockout == null:
+		return
+	var model := ModelLibrary.instantiate_model("player_body")
+	if model == null:
+		return
+	add_child(model)
+	model.name = "PlayerBody_Model"
+	blockout.queue_free()
 
 
 func _physics_process(delta):
@@ -457,10 +477,25 @@ func get_grapple_enemy() -> Node3D:
 func _ensure_grapple_line() -> void:
 	if _grapple_line != null and is_instance_valid(_grapple_line):
 		return
+
+	var model := ModelLibrary.instantiate_model("grapple_rope")
+	if model != null:
+		add_child(model)
+		_grapple_line = model
+		_grapple_line_axis = ModelLibrary.length_axis("grapple_rope")
+		_grapple_line_base = _axis_extent(
+			ModelLibrary.normalized_aabb(model), _grapple_line_axis
+		)
+		return
+
+	# TODO: Assign model asset — drop a .glb at the path in ModelLibrary.SPECS
+	# ("grapple_rope") and this primitive is removed automatically.
+	# NOTE: the asset must be a straight rope authored along +Y at 1.0 m so it
+	# can be stretched to any grapple distance without visible distortion.
 	var mid_mesh := CylinderMesh.new()
 	mid_mesh.top_radius = 0.012
 	mid_mesh.bottom_radius = 0.012
-	# TODO: Assign model asset (.glb) — replace placeholder grapple line with a rope / cord mesh.
+	mid_mesh.height = 1.0
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(0.8, 0.6, 0.2, 0.6)
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -470,6 +505,27 @@ func _ensure_grapple_line() -> void:
 	line.material_override = mat
 	add_child(line)
 	_grapple_line = line
+	_grapple_line_axis = Vector3.UP
+	_grapple_line_base = 1.0
+
+
+## Reads a model's extent along one of its principal axes.
+func _axis_extent(box: AABB, axis: Vector3) -> float:
+	if axis == Vector3.UP:
+		return box.size.y
+	if axis == Vector3.RIGHT:
+		return box.size.x
+	return box.size.z
+
+
+## Builds the scale that stretches a rope to [param length] along its axis.
+func _grapple_line_scale(length: float) -> Vector3:
+	var stretch := length / maxf(_grapple_line_base, 0.001)
+	if _grapple_line_axis == Vector3.UP:
+		return Vector3(1.0, stretch, 1.0)
+	if _grapple_line_axis == Vector3.RIGHT:
+		return Vector3(stretch, 1.0, 1.0)
+	return Vector3(1.0, 1.0, stretch)
 
 
 func _update_grapple_line() -> void:
@@ -487,9 +543,7 @@ func _set_line_between(from: Vector3, to: Vector3) -> void:
 		_grapple_line.visible = false
 		return
 	_grapple_line.visible = true
-	var mesh := _grapple_line.mesh as CylinderMesh
-	if mesh != null:
-		mesh.height = length
+	_grapple_line.scale = _grapple_line_scale(length)
 	var dir := segment / length
 	var up := Vector3.UP
 	if absf(dir.dot(Vector3.UP)) > 0.99:

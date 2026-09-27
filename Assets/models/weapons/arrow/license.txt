@@ -1,0 +1,11 @@
+Model Information:
+* title:	Low-Poly Arrow v2.0
+* source:	https://sketchfab.com/3d-models/low-poly-arrow-v20-7a8542971fd0460aaae5bdd24790881b
+* author:	Teslov (https://sketchfab.com/Teslov)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Low-Poly Arrow v2.0" (https://sketchfab.com/3d-models/low-poly-arrow-v20-7a8542971fd0460aaae5bdd24790881b) by Teslov (https://sketchfab.com/Teslov) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

@@ -31,6 +31,7 @@ var _patrol_dir := 1.0
 var _fly_angle := 0.0
 var _flash_progress := 0.0
 var _body_mat: StandardMaterial3D
+var _body_materials: Array[StandardMaterial3D] = []
 
 var _bar_root: Node3D
 var _health_bar_fill: MeshInstance3D
@@ -40,7 +41,7 @@ var _fill_material: StandardMaterial3D
 func _ready() -> void:
 	_spawn_position = global_position
 	health = max_health
-	build_placeholder_visuals()
+	build_visuals()
 	build_health_bar()
 	_update_health_bar()
 
@@ -107,7 +108,7 @@ func respawn() -> void:
 	visible = true
 	collision_layer = 1
 	collision_mask = 1
-	_body_mat.albedo_color = body_color
+	_set_body_color(body_color)
 	_update_health_bar()
 
 
@@ -134,13 +135,13 @@ func _update_flight(delta: float) -> void:
 
 
 func _update_flash(delta: float) -> void:
-	if _flash_progress <= 0.0 or _body_mat == null:
+	if _flash_progress <= 0.0 or _body_materials.is_empty():
 		return
 	_flash_progress -= delta
 	if _flash_progress <= 0.0:
-		_body_mat.albedo_color = body_color
+		_set_body_color(body_color)
 		return
-	_body_mat.albedo_color = body_color.lerp(flash_color, _flash_progress / hit_flash_time)
+	_set_body_color(body_color.lerp(flash_color, _flash_progress / hit_flash_time))
 
 
 func _clear_nearby_arrows(origin: Vector3) -> void:
@@ -150,15 +151,28 @@ func _clear_nearby_arrows(origin: Vector3) -> void:
 			node.queue_free()
 
 
-func build_placeholder_visuals() -> void:
+## Builds the dummy's body visuals, preferring the real asset.
+##
+## Flash tinting is material-preserving: a textured model keeps its textures and
+## only has `albedo_color` driven, so a hit still reads as a colour flash
+## instead of swapping to a flat colour.
+func build_visuals() -> void:
+	var model := ModelLibrary.instantiate_model("training_dummy")
+	if model != null:
+		add_child(model)
+		_collect_body_materials(model)
+		return
+
+	# TODO: Assign model asset — drop a .glb at the path in ModelLibrary.SPECS
+	# ("training_dummy") and these primitives are removed automatically.
 	var visuals := Node3D.new()
 	visuals.name = "PlaceholderVisuals"
-	# TODO: Assign model asset (res://assets/characters/dummy.glb)
 	add_child(visuals)
 
 	_body_mat = StandardMaterial3D.new()
 	_body_mat.albedo_color = body_color
 	_body_mat.roughness = 0.6
+	_body_materials.append(_body_mat)
 
 	var body_mesh := CapsuleMesh.new()
 	body_mesh.radius = 0.3
@@ -171,24 +185,44 @@ func build_placeholder_visuals() -> void:
 	visuals.add_child(body)
 
 
+## Duplicates every surface material under [param model] so the flash can tint
+## them without mutating the shared source asset in the import cache.
+func _collect_body_materials(model: Node3D) -> void:
+	for child: Node in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := child as MeshInstance3D
+		if mi == null or mi.mesh == null:
+			continue
+		for surface in mi.mesh.get_surface_count():
+			var src := mi.mesh.surface_get_material(surface) as Material
+			var tint := src.duplicate() as StandardMaterial3D
+			if tint == null:
+				continue
+			mi.set_surface_override_material(surface, tint)
+			_body_materials.append(tint)
+
+
+## Drives every body material toward [param color]. An untextured model uses a
+## single `_body_mat`; a textured one re-tints each duplicated surface.
+func _set_body_color(color: Color) -> void:
+	for mat: StandardMaterial3D in _body_materials:
+		if mat != null:
+			mat.albedo_color = color
+
+
 # Dev/test UI — a billboarded HP bar floating above the dummy. Not final game
 # geometry; replaced by a proper UI/feedback system when real assets exist.
+#
+# The bar is a single unbacked quad. A dark background plate behind it was
+# removed: against a bright sky it read as a black smear across the dummy and
+# made the fill harder to judge, not easier.
 func build_health_bar() -> void:
-	var bg_mat := StandardMaterial3D.new()
-	bg_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	bg_mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	bg_mat.albedo_color = Color(0.06, 0.06, 0.08, 0.8)
-
-	var bg_mesh := QuadMesh.new()
-	bg_mesh.size = Vector2(1.5, 0.2)
-	var bg := MeshInstance3D.new()
-	bg.name = "HealthBarBg_Placeholder"
-	bg.mesh = bg_mesh
-	bg.material_override = bg_mat
-
 	_fill_material = StandardMaterial3D.new()
 	_fill_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_fill_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	# Unshaded + depth-test off so the bar stays readable against the sky and
+	# is never clipped by the dummy's own geometry.
+	_fill_material.no_depth_test = true
+	_fill_material.render_priority = 1
 	_fill_material.albedo_color = Color(0.35, 0.95, 0.4)
 
 	var fill_mesh := QuadMesh.new()
@@ -201,7 +235,6 @@ func build_health_bar() -> void:
 	_bar_root = Node3D.new()
 	_bar_root.name = "HealthBar"
 	_bar_root.position.y = 2.125
-	_bar_root.add_child(bg)
 	_bar_root.add_child(_health_bar_fill)
 	add_child(_bar_root)
 
@@ -233,8 +266,13 @@ func _spawn_damage_label(amount: int) -> void:
 	var world := get_tree().current_scene
 	if world == null:
 		world = get_parent()
-	label.global_position = global_position + Vector3(randf_range(-0.25, 0.25), 2.2, randf_range(-0.25, 0.25))
+	# Parent BEFORE positioning: global_position is a no-op on a node that is
+	# not in the tree, so setting it first silently dropped the placement (and
+	# logged an error on every hit) and left the popup at the world origin.
 	world.add_child(label)
+	label.global_position = global_position + Vector3(
+		randf_range(-0.25, 0.25), 2.2, randf_range(-0.25, 0.25)
+	)
 
 	var tween := label.create_tween()
 	tween.set_parallel(true)

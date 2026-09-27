@@ -14,6 +14,14 @@ var _source: Node3D = null
 var _impact_basis := Basis.IDENTITY
 var _impact_pose_set := false
 
+## Speed captured BEFORE the solver resolves contacts.
+##
+## `body_entered` is emitted after the physics step that stopped this body, so
+## reading `linear_velocity` inside the handler always returns 0 and every hit
+## dealt 0 damage. The pre-solve speed is the real impact speed, and it is
+## what the damage formula must use.
+var _impact_speed := 0.0
+
 
 func _ready() -> void:
 	contact_monitor = true
@@ -34,11 +42,8 @@ func _ready() -> void:
 	if col is CollisionShape3D:
 		col.rotation_degrees = Vector3(90, 0, 0)
 
-	var model := Node3D.new()
-	model.name = "PlaceholderVisuals"
-	# TODO: Assign model asset (.glb) — replace placeholder primitives with instanced model.
-	add_child(model)
-	build_arrow_mesh(model)
+	# build_visual parents its result to `self` itself.
+	build_visual(self)
 	_autofree()
 
 
@@ -46,7 +51,27 @@ func set_source(body: Node3D) -> void:
 	_source = body
 
 
-static func build_arrow_mesh(parent: Node3D) -> void:
+## Builds the arrow's visuals under [param parent].
+##
+## Prefers the real asset from ModelLibrary; falls back to the labeled
+## placeholder primitives when it is not downloaded yet. Returns the container
+## that was populated, or `null` if [param parent] was invalid.
+static func build_visual(parent: Node3D) -> Node3D:
+	if parent == null:
+		push_error("Arrow.build_visual() needs a parent node.")
+		return null
+
+	var model := ModelLibrary.instantiate_model("arrow")
+	if model != null:
+		parent.add_child(model)
+		return model
+
+	# TODO: Assign model asset — drop a .glb at the path in ModelLibrary.SPECS
+	# ("arrow") and these primitives are removed automatically.
+	var visuals := Node3D.new()
+	visuals.name = "PlaceholderVisuals"
+	parent.add_child(visuals)
+
 	var wood := StandardMaterial3D.new()
 	wood.albedo_color = Color(0.52, 0.33, 0.16, 1.0)
 	wood.roughness = 0.85
@@ -63,7 +88,7 @@ static func build_arrow_mesh(parent: Node3D) -> void:
 	shaft.mesh = shaft_mesh
 	shaft.rotation_degrees = Vector3(90, 0, 0)
 	shaft.material_override = wood
-	parent.add_child(shaft)
+	visuals.add_child(shaft)
 
 	var head_mesh := CylinderMesh.new()
 	head_mesh.bottom_radius = 0.04
@@ -75,7 +100,7 @@ static func build_arrow_mesh(parent: Node3D) -> void:
 	head.position = Vector3(0, 0, -0.53)
 	head.rotation_degrees = Vector3(-90, 0, 0)
 	head.material_override = wood
-	parent.add_child(head)
+	visuals.add_child(head)
 
 	for i in 3:
 		var fin_mesh := BoxMesh.new()
@@ -86,7 +111,9 @@ static func build_arrow_mesh(parent: Node3D) -> void:
 		fin.position = Vector3(0, 0, 0.42)
 		fin.rotation_degrees = Vector3(0, float(i) * 120.0, 0)
 		fin.material_override = fletch
-		parent.add_child(fin)
+		visuals.add_child(fin)
+
+	return visuals
 
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
@@ -98,6 +125,10 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		return
 
 	var vel := state.linear_velocity
+	# Keep the last genuinely-moving speed. The step that makes contact reports
+	# a velocity of zero here as well as in body_entered, because both are
+	# delivered after the solver has resolved the collision.
+	_capture_speed(vel.length())
 	if vel.length_squared() < 4.0:
 		return
 	var dir := vel.normalized()
@@ -110,6 +141,10 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	# _physics_process runs BEFORE the step, so this is the last reliable read
+	# of the arrow's real flight speed.
+	if not _frozen:
+		_capture_speed(linear_velocity.length())
 	if _frozen:
 		if _impact_pose_set and not global_transform.basis.is_equal_approx(_impact_basis):
 			var tf := global_transform
@@ -132,6 +167,16 @@ func _physics_process(_delta: float) -> void:
 		# gap that discrete/CCD contact would miss.
 		_sweep_hit(_prev_position, current)
 	_prev_position = current
+
+
+## Records the arrow's in-flight speed, ignoring stops.
+##
+## Both `body_entered` and `_integrate_forces` report a velocity of zero on the
+## step where contact happens, so the impact speed has to be remembered from
+## the last step the arrow was actually travelling.
+func _capture_speed(speed: float) -> void:
+	if speed > 0.5:
+		_impact_speed = speed
 
 
 func _sweep_hit(from: Vector3, to: Vector3) -> void:
@@ -161,10 +206,41 @@ func _sweep_hit(from: Vector3, to: Vector3) -> void:
 		exclude.append((_source as PhysicsBody3D).get_rid())
 	params.exclude = exclude
 
-	var results := space.intersect_shape(params, 1)
+	# Ask for several candidates: intersect_shape does NOT return hits ordered by
+	# distance, so taking only the first result can report a body that is well
+	# past the target while the target itself is also inside the swept volume.
+	var results := space.intersect_shape(params, 8)
 	if results.is_empty():
 		return
-	_handle_impact(results[0].get("collider") as Node)
+	_handle_impact(_nearest_along(results, from, dir))
+
+
+## Picks the candidate the arrow met first.
+##
+## `intersect_shape` gives no ordering and no contact point, so distance is
+## measured by projecting each collider's origin onto the travel direction.
+## Ties break in favour of something that can take damage, so an arrow clipping
+## a wall and a target in the same step still credits the target.
+func _nearest_along(results: Array[Dictionary], from: Vector3, dir: Vector3) -> Node:
+	var best: Node = null
+	var best_t := INF
+	var best_hits := false
+	for entry: Dictionary in results:
+		var collider := entry.get("collider") as Node
+		if collider == null or collider == _source or collider is Arrow:
+			continue
+		var hits := collider.has_method("take_damage")
+		var t := INF
+		var node3d := collider as Node3D
+		if node3d != null:
+			t = (node3d.global_position - from).dot(dir)
+		# Strictly-less keeps the first candidate on a tie; a damageable
+		# candidate only wins an exact tie.
+		if t < best_t or (is_equal_approx(t, best_t) and hits and not best_hits):
+			best = collider
+			best_t = t
+			best_hits = hits
+	return best
 
 
 func _on_body_entered(body: Node) -> void:
@@ -184,7 +260,11 @@ func _handle_impact(body: Node) -> void:
 	var impact_dir := -global_transform.basis.z
 	if linear_velocity.length_squared() > 1.0:
 		impact_dir = linear_velocity.normalized()
-	var impact_speed := linear_velocity.length()
+	# Fall back to the live velocity if the pre-solve capture is missing (e.g.
+	# an impact detected by the sweep before any integration ran).
+	var impact_speed := _impact_speed
+	if impact_speed <= 0.0:
+		impact_speed = linear_velocity.length()
 
 	# On stick: stop acting as a solid obstacle, embed into the victim so it
 	# rides along (moving dummies are no longer blocked), and despawn after a

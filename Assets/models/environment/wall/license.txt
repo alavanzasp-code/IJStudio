@@ -1,0 +1,11 @@
+Model Information:
+* title:	Concrete Sleeper Retaining Wall
+* source:	https://sketchfab.com/3d-models/concrete-sleeper-retaining-wall-bcaadd18d8b94e91a5f9d8ff39dc9b79
+* author:	agrant2 (https://sketchfab.com/agrant2)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Concrete Sleeper Retaining Wall" (https://sketchfab.com/3d-models/concrete-sleeper-retaining-wall-bcaadd18d8b94e91a5f9d8ff39dc9b79) by agrant2 (https://sketchfab.com/agrant2) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
