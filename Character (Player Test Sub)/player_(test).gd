@@ -148,6 +148,9 @@ func _physics_process(delta):
 		var released := update_wall_attach(delta)
 		if not released:
 			velocity = Vector3.ZERO
+			# The cling branch returns before update_grapple runs, so the rope
+			# needs refreshing here or it freezes at the last pre-release frame.
+			_update_grapple_line()
 		move_and_slide()
 		return
 
@@ -309,6 +312,9 @@ func _start_surface_grapple(hit: Dictionary) -> bool:
 	velocity.z *= 0.2
 	camera_settings.set_grappling(true)
 	camera_settings.add_shake(0.12)
+	# A wall grapple needs the rope too — this is the default grapple, and it
+	# was silently rope-less because only the enemy hold built one.
+	_ensure_grapple_line()
 	return true
 
 
@@ -493,16 +499,25 @@ func _ensure_grapple_line() -> void:
 	# NOTE: the asset must be a straight rope authored along +Y at 1.0 m so it
 	# can be stretched to any grapple distance without visible distortion.
 	var mid_mesh := CylinderMesh.new()
-	mid_mesh.top_radius = 0.012
-	mid_mesh.bottom_radius = 0.012
+	# 4 cm reads at the 10-30 m grapple range; the old 1.2 cm at 60% alpha was
+	# effectively invisible, which is part of why the rope read as "missing".
+	mid_mesh.top_radius = 0.02
+	mid_mesh.bottom_radius = 0.02
 	mid_mesh.height = 1.0
+	mid_mesh.radial_segments = 8
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.8, 0.6, 0.2, 0.6)
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = Color(0.85, 0.65, 0.25, 1.0)
+	# Unshaded so the rope stays legible against both the dark wall art and the
+	# bright sky instead of vanishing into whichever it is backlit against.
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var line := MeshInstance3D.new()
 	line.name = "GrappleLine_Placeholder"
 	line.mesh = mid_mesh
 	line.material_override = mat
+	# The rope is scaled far past 1.0 along its length, and `cast_shadow` is off
+	# by default for this path, but be explicit: a stretched shadow proxy is not
+	# worth the cost.
+	line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(line)
 	_grapple_line = line
 	_grapple_line_axis = Vector3.UP
@@ -518,20 +533,55 @@ func _axis_extent(box: AABB, axis: Vector3) -> float:
 	return box.size.z
 
 
-## Builds the scale that stretches a rope to [param length] along its axis.
-func _grapple_line_scale(length: float) -> Vector3:
-	var stretch := length / maxf(_grapple_line_base, 0.001)
-	if _grapple_line_axis == Vector3.UP:
-		return Vector3(1.0, stretch, 1.0)
+## Basis that points the rope's authored length axis along [param dir], and
+## stretches it to [param length] in the same step.
+##
+## The stretch has to live IN the basis. Assigning `global_transform` resets
+## scale along with rotation, so setting `.scale` beforehand (as this used to)
+## silently threw the length away and left the rope at its native 1 m — a stub
+## at the player's hand rather than a line to the anchor.
+##
+## The frame puts local +Y on `dir` and then pre-rotates so the asset's actual
+## length axis (`_grapple_line_axis`, from the spec) lands there too. Without
+## that pre-rotation a rope authored along X would be stretched correctly but
+## point across the grapple instead of along it.
+func _rope_basis(dir: Vector3, length: float) -> Basis:
+	var helper := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.99 else Vector3.RIGHT
+	var z_axis := helper.cross(dir).normalized()
+	var x_axis := dir.cross(z_axis).normalized()
+	var frame := Basis(x_axis, dir, z_axis)
+
+	# Rotate the authored axis onto +Y, THEN scale, THEN swing +Y onto `dir`.
+	# Order matters: scaling before the alignment would stretch whichever axis
+	# happened to be +Y beforehand, which is the wrong one for an X- or Z-authored
+	# rope and leaves it stretched across the grapple instead of along it.
+	var align := Basis.IDENTITY
 	if _grapple_line_axis == Vector3.RIGHT:
-		return Vector3(stretch, 1.0, 1.0)
-	return Vector3(1.0, 1.0, stretch)
+		align = Basis(Vector3(0, 0, 1), PI * 0.5)
+	elif _grapple_line_axis == Vector3.BACK:
+		align = Basis(Vector3(1, 0, 0), PI * 0.5)
+
+	# Scale +Y only. A uniform scale would fatten the rope in proportion to its
+	# length, so a 20 m pull would render 20x thicker than a 2 m one.
+	var stretch := length / maxf(_grapple_line_base, 0.001)
+	return frame * Basis.from_scale(Vector3(1.0, stretch, 1.0)) * align
 
 
+## Points the rope at whatever is currently held.
+##
+## Both grapple kinds share one rope node: the enemy hold reels toward a dummy,
+## while a wall grapple flies toward the surface anchor. The old guard bailed
+## out unless `grapple_enemy` was set, so the wall grapple — the default one —
+## never drew a line even once the node existed.
 func _update_grapple_line() -> void:
-	if _grapple_line == null or not is_instance_valid(_grapple_line) or grapple_enemy == null:
+	if _grapple_line == null or not is_instance_valid(_grapple_line):
 		return
-	_set_line_between(global_position + Vector3(0, 1.1, 0), grapple_enemy.global_position + Vector3(0, 0.5, 0))
+
+	var hand := global_position + Vector3(0, 1.1, 0)
+	if grapple_enemy != null and is_instance_valid(grapple_enemy):
+		_set_line_between(hand, grapple_enemy.global_position + Vector3(0, 0.5, 0))
+	elif is_grappled or is_wall_attached:
+		_set_line_between(hand, grapple_target)
 
 
 func _set_line_between(from: Vector3, to: Vector3) -> void:
@@ -543,14 +593,8 @@ func _set_line_between(from: Vector3, to: Vector3) -> void:
 		_grapple_line.visible = false
 		return
 	_grapple_line.visible = true
-	_grapple_line.scale = _grapple_line_scale(length)
 	var dir := segment / length
-	var up := Vector3.UP
-	if absf(dir.dot(Vector3.UP)) > 0.99:
-		up = Vector3.RIGHT
-	var z_axis := up.cross(dir).normalized()
-	var x_axis := dir.cross(z_axis).normalized()
-	_grapple_line.global_transform = Transform3D(Basis(x_axis, dir, z_axis), (from + to) * 0.5)
+	_grapple_line.global_transform = Transform3D(_rope_basis(dir, length), (from + to) * 0.5)
 
 
 func _clear_grapple_line() -> void:
@@ -560,6 +604,10 @@ func _clear_grapple_line() -> void:
 
 
 func update_grapple(delta) -> void:
+	# Keep the rope tracking the anchor while flying. Done before the early
+	# returns below so it also covers the wind-up and the attach transition.
+	_update_grapple_line()
+
 	# Jumping mid-grapple cancels the pull and flings you off with momentum
 	if Input.is_action_just_pressed("jump"):
 		end_grapple()
@@ -602,16 +650,21 @@ func attach_to_wall() -> void:
 	velocity = Vector3.ZERO
 	camera_settings.set_grappling(false)
 	camera_settings.add_shake(0.08)
+	# Stay anchored: the rope keeps spanning hand-to-wall while clinging, so
+	# release it only when the cling itself ends.
+	_update_grapple_line()
 
 
 func update_wall_attach(_delta: float) -> bool:
 	if is_on_floor():
 		is_wall_attached = false
+		_clear_grapple_line()
 		return true
 
 	# Jump breaks the grip and flings off the surface
 	if Input.is_action_just_pressed("jump"):
 		is_wall_attached = false
+		_clear_grapple_line()
 		velocity = grapple_surface_normal * wall_attach_push
 		velocity.y = wall_attach_hop
 		camera_settings.set_grappling(false)
@@ -624,6 +677,10 @@ func update_wall_attach(_delta: float) -> bool:
 func end_grapple(damp_velocity := false) -> void:
 	is_grappled = false
 	camera_settings.set_grappling(false)
+	# Drop the rope. is_wall_attached is left alone: end_grapple() is also the
+	# cancel path out of a cling, and update_wall_attach owns that state.
+	if not is_wall_attached:
+		_clear_grapple_line()
 
 	if damp_velocity:
 		# Landing damp — bleed off the incoming pull so we don't slam the wall
