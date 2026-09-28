@@ -32,7 +32,7 @@ Orientation is the only thing that cannot be automated. The loader normalizes
 | `wall` | `environment/wall/` | **sourced** | precast concrete panel, tiles to exactly 30×3.8×0.5 |
 | `player_body` | `characters/player_body/` | **MISSING** | falls back to the capsule |
 | `wall_block` | `environment/wall_block/` | **MISSING** | decor walls stay as boxes |
-| `grapple_rope` | `props/grapple_rope/` | **MISSING** | see below |
+| `grapple_rope` | `props/grapple_rope/` | **MISSING** | see below; stretched via basis scale, never `Node3D.scale` |
 
 ## Orientation contract
 
@@ -99,6 +99,14 @@ Stretching a detailed rope mesh distorts the twist. The honest options are:
 The rope is the one requested item with no acceptable asset on Sketchfab:
 searches for a straight rope returned only museum scans and unrelated vehicles.
 
+The fallback cylinder is stretched to the exact anchor distance by scaling the
+transform's **basis**, not by setting `Node3D.scale`. `global_transform` resets
+scale along with rotation, so assigning scale first and the transform second
+silently discarded the length and left a 1 m stub at the player's hand. If you
+ever re-introduce a `.scale` assignment here, check it against
+`Assets/test_grapple_line.gd`, which asserts the rope length equals the anchor
+distance.
+
 ## Licencing
 
 All sourced models are **CC Attribution (CC-BY)** — commercial use is permitted
@@ -141,6 +149,8 @@ Sketchfab's "downloadable" filter is dominated by photogrammetry scans.
 godot --headless --import                            # re-import new assets
 godot --headless --script Assets/validate_models.gd  # sizes, centering, tiling
 godot --headless --script Assets/verify_scene.gd     # what the scene really contains
+godot --headless --script Assets/arena_layout.gd     # arena block AABBs + top-down map
+godot --headless --script Assets/test_grapple_line.gd   # rope exists and spans the anchor
 godot --headless --script Assets/test_arrow_damage.gd  # damage regression, exits non-zero on failure
 ```
 
