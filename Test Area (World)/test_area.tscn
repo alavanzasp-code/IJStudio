@@ -18,44 +18,50 @@ sky = SubResource("Sky_0lty6")
 glow_enabled = true
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
-size = Vector3(30, 1.2, 30)
+size = Vector3(40, 1.2, 40)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_east"]
-size = Vector3(0.5, 3.8, 30)
+size = Vector3(0.5, 3.8, 40)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_west"]
-size = Vector3(0.5, 3.8, 30)
+size = Vector3(0.5, 3.8, 40)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_north"]
-size = Vector3(30, 3.8, 0.5)
+size = Vector3(40, 3.8, 0.5)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_wall_south"]
-size = Vector3(30, 3.8, 0.5)
+size = Vector3(40, 3.8, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cover_wall_long"]
+size = Vector3(12, 3.8, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cover_wall_short"]
+size = Vector3(0.5, 3.8, 12)
 
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
-size = Vector3(30, 1.2, 30)
+size = Vector3(40, 1.2, 40)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mltf8"]
 albedo_texture = ExtResource("1_p57bx")
 uv1_triplanar = true
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall_east"]
-size = Vector3(0.5, 3.8, 30)
+size = Vector3(0.5, 3.8, 40)
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall_west"]
-size = Vector3(0.5, 3.8, 30)
+size = Vector3(0.5, 3.8, 40)
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall_north"]
-size = Vector3(30, 3.8, 0.5)
+size = Vector3(40, 3.8, 0.5)
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall_south"]
-size = Vector3(30, 3.8, 0.5)
+size = Vector3(40, 3.8, 0.5)
 
+[sub_resource type="BoxMesh" id="BoxMesh_cover_wall_long"]
+size = Vector3(12, 3.8, 0.5)
 
-
-
-
-
+[sub_resource type="BoxMesh" id="BoxMesh_cover_wall_short"]
+size = Vector3(0.5, 3.8, 12)
 
 [node name="Test Area" type="Node3D" unique_id=1012487593]
 script = ExtResource("4_upgrade")
@@ -102,20 +108,36 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6, 0)
 shape = SubResource("BoxShape3D_floor")
 
 [node name="WallEastCollision" type="CollisionShape3D" parent="Arena" unique_id=774350399]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 1.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.75, 1.9, 0)
 shape = SubResource("BoxShape3D_wall_east")
 
 [node name="WallWestCollision" type="CollisionShape3D" parent="Arena" unique_id=748395009]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 1.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.75, 1.9, 0)
 shape = SubResource("BoxShape3D_wall_west")
 
 [node name="WallNorthCollision" type="CollisionShape3D" parent="Arena" unique_id=1017424523]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, -14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, -19.75)
 shape = SubResource("BoxShape3D_wall_north")
 
 [node name="WallSouthCollision" type="CollisionShape3D" parent="Arena" unique_id=191518275]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 19.75)
 shape = SubResource("BoxShape3D_wall_south")
+
+[node name="CoverWallNorthCollision" type="CollisionShape3D" parent="Arena" unique_id=1111111115]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 8)
+shape = SubResource("BoxShape3D_cover_wall_long")
+
+[node name="CoverWallSouthCollision" type="CollisionShape3D" parent="Arena" unique_id=1111111116]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, -8)
+shape = SubResource("BoxShape3D_cover_wall_long")
+
+[node name="CoverWallEastCollision" type="CollisionShape3D" parent="Arena" unique_id=1111111117]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.9, 0)
+shape = SubResource("BoxShape3D_cover_wall_short")
+
+[node name="CoverWallWestCollision" type="CollisionShape3D" parent="Arena" unique_id=1111111118]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1.9, 0)
+shape = SubResource("BoxShape3D_cover_wall_short")
 
 [node name="FloorMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=1724282437]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
@@ -123,21 +145,41 @@ mesh = SubResource("BoxMesh_floor")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallEastMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=279664668]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 1.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.75, 1.9, 0)
 mesh = SubResource("BoxMesh_wall_east")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallWestMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=902476942]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 1.9, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.75, 1.9, 0)
 mesh = SubResource("BoxMesh_wall_west")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallNorthMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=1512809238]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, -14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, -19.75)
 mesh = SubResource("BoxMesh_wall_north")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallSouthMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=1987054882]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 19.75)
 mesh = SubResource("BoxMesh_wall_south")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="CoverWallNorthMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=2111111115]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 8)
+mesh = SubResource("BoxMesh_cover_wall_long")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="CoverWallSouthMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=2111111116]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, -8)
+mesh = SubResource("BoxMesh_cover_wall_long")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="CoverWallEastMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=2111111117]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.9, 0)
+mesh = SubResource("BoxMesh_cover_wall_short")
+surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
+
+[node name="CoverWallWestMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=2111111118]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1.9, 0)
+mesh = SubResource("BoxMesh_cover_wall_short")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
