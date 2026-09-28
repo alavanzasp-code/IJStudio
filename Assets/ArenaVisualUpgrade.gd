@@ -55,8 +55,13 @@ func _upgrade(mi: MeshInstance3D) -> void:
 	var parent := mi.get_parent()
 	parent.add_child(fitted)
 	fitted.name = String(mi.name).replace("_Placeholder", "_Model")
-	# Inherit the blockout's placement so the swap is invisible to gameplay.
-	fitted.transform = mi.transform
+	# Inherit the blockout's PLACEMENT only. Assigning `transform` wholesale
+	# would reset the basis as well, and that basis is precisely what
+	# tile_to_fit built: it rotates the model's long axis onto the block's long
+	# axis and scales it to absorb the sub-tile remainder. Wiping it leaves
+	# native-sized tiles running off the block along the wrong world axis, so
+	# keep the fitted basis and copy the position across.
+	fitted.transform = Transform3D(fitted.basis, mi.transform.origin)
 	mi.queue_free()
 
 
