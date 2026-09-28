@@ -68,7 +68,7 @@ transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545
 shadow_enabled = true
 
 [node name="Player (Test)" parent="." unique_id=1302519365 instance=ExtResource("2_0lty6")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3553977, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8813245, 0)
 
 [node name="DummyGround" parent="." instance=ExtResource("3_dummy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.15, -4)
@@ -98,46 +98,46 @@ body_color = Color(0.95, 0.55, 0.2, 1)
 [node name="Arena" type="StaticBody3D" parent="." unique_id=1964907056]
 
 [node name="FloorCollision" type="CollisionShape3D" parent="Arena" unique_id=2091897347]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6, 0)
 shape = SubResource("BoxShape3D_floor")
 
 [node name="WallEastCollision" type="CollisionShape3D" parent="Arena" unique_id=774350399]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 2.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 1.9, 0)
 shape = SubResource("BoxShape3D_wall_east")
 
 [node name="WallWestCollision" type="CollisionShape3D" parent="Arena" unique_id=748395009]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 2.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 1.9, 0)
 shape = SubResource("BoxShape3D_wall_west")
 
 [node name="WallNorthCollision" type="CollisionShape3D" parent="Arena" unique_id=1017424523]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, -14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, -14.75)
 shape = SubResource("BoxShape3D_wall_north")
 
 [node name="WallSouthCollision" type="CollisionShape3D" parent="Arena" unique_id=191518275]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 14.75)
 shape = SubResource("BoxShape3D_wall_south")
 
 [node name="FloorMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=1724282437]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.45, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("BoxMesh_floor")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallEastMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=279664668]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 2.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.75, 1.9, 0)
 mesh = SubResource("BoxMesh_wall_east")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallWestMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=902476942]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 2.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.75, 1.9, 0)
 mesh = SubResource("BoxMesh_wall_west")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallNorthMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=1512809238]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, -14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, -14.75)
 mesh = SubResource("BoxMesh_wall_north")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
 
 [node name="WallSouthMesh_Placeholder" type="MeshInstance3D" parent="Arena" unique_id=1987054882]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.05, 14.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, 14.75)
 mesh = SubResource("BoxMesh_wall_south")
 surface_material_override/0 = SubResource("StandardMaterial3D_mltf8")
